@@ -1,0 +1,31 @@
+/* Override default heatmap styles */
+.react-calendar-heatmap .color-empty {
+  fill: hsl(var(--heroui-default-100));
+}
+
+.react-calendar-heatmap .color-github-1 {
+  fill: hsl(var(--heroui-primary-200));
+}
+
+.react-calendar-heatmap .color-github-2 {
+  fill: hsl(var(--heroui-primary-400));
+}
+
+.react-calendar-heatmap .color-github-3 {
+  fill: hsl(var(--heroui-primary-600));
+}
+
+.react-calendar-heatmap .color-github-4 {
+  fill: hsl(var(--heroui-primary-800));
+}
+
+/* Remove default rect stroke */
+.react-calendar-heatmap rect {
+  rx: 2px;
+}
+
+/* Text color for month/day labels */
+.react-calendar-heatmap text {
+  fill: hsl(var(--heroui-default-500));
+  font-size: 8px;
+}

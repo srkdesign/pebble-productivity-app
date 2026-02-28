@@ -1,0 +1,42 @@
+/* fullcalendar-theme.css */
+
+.fc {
+  --fc-border-color: hsl(var(--heroui-default-200));
+  --fc-button-bg-color: hsl(var(--heroui-default-100));
+  --fc-button-border-color: hsl(var(--heroui-default-200));
+  --fc-button-text-color: hsl(var(--heroui-foreground));
+  --fc-button-hover-bg-color: hsl(var(--heroui-default-200));
+  --fc-button-hover-border-color: hsl(var(--heroui-default-300));
+  --fc-button-active-bg-color: hsl(var(--heroui-default-300));
+  --fc-today-bg-color: hsl(var(--heroui-primary-100) / 0.3);
+  --fc-neutral-bg-color: hsl(var(--heroui-default-100));
+  --fc-neutral-text-color: hsl(var(--heroui-default-500));
+  --fc-page-bg-color: hsl(var(--heroui-background));
+  --fc-event-bg-color: hsl(var(--heroui-primary));
+  --fc-event-border-color: hsl(var(--heroui-primary));
+  --fc-event-text-color: hsl(var(--heroui-primary-foreground));
+}
+
+/* Header text */
+.fc .fc-toolbar-title {
+  color: hsl(var(--heroui-foreground));
+}
+
+/* Day/date numbers */
+.fc .fc-col-header-cell-cushion,
+.fc .fc-daygrid-day-number {
+  color: hsl(var(--heroui-foreground));
+}
+
+/* Remove default button styles and match HeroUI flat style */
+.fc .fc-button {
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  padding: 0.375rem 0.75rem;
+  transition: background 0.2s;
+}
+
+.fc .fc-button:focus {
+  box-shadow: none;
+}
