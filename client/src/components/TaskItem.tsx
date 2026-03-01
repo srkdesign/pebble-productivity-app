@@ -214,7 +214,7 @@ export default function TaskItem({
                 )}
               </Checkbox>
             </div>
-            <div className="flex gap-4 text-sm text-neutral-500 items-center justify-between">
+            <div className="flex gap-4 text-sm text-neutral-500 items-center justify-between md:justify-start">
               {/* Project */}
               <div className="flex gap-1 items-center">
                 <span>Project:</span>
