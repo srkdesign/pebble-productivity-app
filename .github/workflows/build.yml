@@ -72,6 +72,8 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
+          overwrite: true
+          fail_on_unmatched_files: false
           files: |
             artifacts/pebbleproductivityapp-ubuntu-latest/pebbleproductivityapp
             artifacts/pebbleproductivityapp-macos-latest/pebbleproductivityapp
