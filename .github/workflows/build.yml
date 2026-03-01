@@ -1,4 +1,4 @@
-name: Build
+name: Build and Release
 
 on:
   push:
@@ -52,26 +52,44 @@ jobs:
         if: runner.os == 'Windows'
         run: uv run pyinstaller --onefile --add-data "server/static;static" server/app.py --name pebbleproductivityapp
 
-      - name: Upload artifact
+      - name: Prepare artifacts per OS
+        run: |
+          mkdir upload
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            cp dist/*.exe upload/app-$RUNNER_OS.exe
+          else
+            cp dist/* upload/app-$RUNNER_OS
+          fi
+        shell: bash
+
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: pebbleproductivityapp-${{ matrix.os }}
-          path: dist/*
+          name: build-${{ matrix.os }}
+          path: upload/*
 
   release:
     needs: build
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download artifacts
+      - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      - name: Show files (debug)
-        run: ls -R artifacts
+      - name: Show downloaded files
+        run: find artifacts -type f
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: artifacts/**/*
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          # Gather all downloaded files
+          files=$(find artifacts -type f)
+          # Create release with assets
+          gh release create "$tag" \
+            --title "$tag" \
+            --notes "Release $tag" \
+            $files
