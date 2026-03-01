@@ -167,7 +167,7 @@ export default function ProjectSidebar({
                     />
                     {p.name}
                   </Button>
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 bg-zinc-800 rounded-lg">
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
                     <ButtonGroup>
                       <Button
                         isIconOnly

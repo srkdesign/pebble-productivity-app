@@ -56,6 +56,22 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pebbleproductivityapp-${{ matrix.os }}
-          path: |
-            dist/pebbleproductivityapp
-            dist/pebbleproductivityapp.exe
+          path: dist/*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Show files (debug)
+        run: ls -R artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
