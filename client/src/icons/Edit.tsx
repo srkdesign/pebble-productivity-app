@@ -1,5 +1,3 @@
-import React from "react";
-
 interface EditIconProps {
   size?: number;
   color?: string;

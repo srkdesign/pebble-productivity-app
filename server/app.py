@@ -1,7 +1,6 @@
-from dotenv import load_dotenv
 import os
-
-from flask import Flask, jsonify, request
+import socket
+from flask import Flask, jsonify, request, send_from_directory
 from server.db.session import SessionLocal, engine
 from server.models.base import Base
 from server.services.project_service import ensure_default_project, create_project
@@ -13,9 +12,7 @@ from server.services.task_service import start_timer, stop_timer
 from server.services.recurring_service import create_recurring_rule, generate_recurring_tasks
 from server.models.recurring_task import RecurringTask
 
-load_dotenv()
-
-app = Flask(__name__)
+app = Flask(__name__, static_folder="static", static_url_path="")
 CORS(app)
 
 # create tables + default project
@@ -24,11 +21,16 @@ session = SessionLocal()
 ensure_default_project(session)
 session.close()
 
-@app.route("/")
-def home():
-    return {"status": "API running"}
+@app.route("/", defaults={"path": ""})
+@app.route("/<path:path>")
+def serve(path):
+    if path.startswith("api/"):
+        return {"error": "Not found"}, 404
+    if path and os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
+    return send_from_directory(app.static_folder, "index.html")
 
-@app.route("/projects", methods=["GET"])
+@app.route("/api/projects", methods=["GET"])
 def get_projects():
     session = SessionLocal()
     projects = session.query(Project).all()
@@ -36,7 +38,7 @@ def get_projects():
     session.close()
     return jsonify(serialized)
 
-@app.route("/projects", methods=["POST"])
+@app.route("/api/projects", methods=["POST"])
 def create_project_route():
     session = SessionLocal()
 
@@ -49,7 +51,7 @@ def create_project_route():
 
     return jsonify(data)
 
-@app.route("/projects/<int:project_id>", methods=["PATCH"])
+@app.route("/api/projects/<int:project_id>", methods=["PATCH"])
 def update_project_route(project_id):
     session = SessionLocal()
     project = session.query(Project).filter(Project.id == project_id).first()
@@ -67,7 +69,18 @@ def update_project_route(project_id):
     session.close()
     return jsonify(result)
 
-@app.route("/tasks", methods=["GET"])
+@app.route("/api/projects/<int:project_id>", methods=["DELETE"])
+def delete_project_route(project_id):
+    session = SessionLocal()
+    project = session.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        return jsonify({"error": "Not found"}), 404
+    session.delete(project)
+    session.commit()
+    session.close()
+    return jsonify({"success": True})
+
+@app.route("/api/tasks", methods=["GET"])
 def get_tasks():
     session = SessionLocal()
     try:
@@ -82,7 +95,7 @@ def get_tasks():
     finally:
         session.close()
 
-@app.route("/tasks", methods=["POST"])
+@app.route("/api/tasks", methods=["POST"])
 def new_task():
     session = SessionLocal()
     data = request.json
@@ -113,7 +126,7 @@ def new_task():
     session.close()
     return jsonify(task_data)
 
-@app.route("/tasks/<int:task_id>/complete", methods=["PUT"])
+@app.route("/api/tasks/<int:task_id>/complete", methods=["PUT"])
 def complete_task(task_id):
     session = SessionLocal()
     task = session.get(Task, task_id)
@@ -130,7 +143,7 @@ def complete_task(task_id):
     session.close()
     return jsonify(data)
 
-@app.route("/tasks/<int:task_id>/delete", methods=["DELETE"])
+@app.route("/api/tasks/<int:task_id>/delete", methods=["DELETE"])
 def delete_task(task_id):
     session = SessionLocal()
     task = session.get(Task, task_id)
@@ -142,7 +155,7 @@ def delete_task(task_id):
     session.close()
     return jsonify({"status": "deleted"})
 
-@app.route("/tasks/<int:task_id>/start", methods=["POST"])
+@app.route("/api/tasks/<int:task_id>/start", methods=["POST"])
 def start_task_timer(task_id):
     session = SessionLocal()
     start_timer(session, task_id)
@@ -151,7 +164,7 @@ def start_task_timer(task_id):
     session.close()
     return jsonify(data)
 
-@app.route("/tasks/<int:task_id>/stop", methods=["POST"])
+@app.route("/api/tasks/<int:task_id>/stop", methods=["POST"])
 def stop_task_timer(task_id):
     session = SessionLocal()
     stop_timer(session, task_id)
@@ -160,7 +173,7 @@ def stop_task_timer(task_id):
     session.close()
     return jsonify(data)
 
-@app.route("/tasks/<int:task_id>", methods=["PATCH"])
+@app.route("/api/tasks/<int:task_id>", methods=["PATCH"])
 def update_task(task_id):
     session = SessionLocal()
     task = session.get(Task, task_id)
@@ -181,24 +194,7 @@ def update_task(task_id):
     session.close()
     return jsonify(result)
 
-# @app.route("/recurring-tasks", methods=["POST"])
-# def new_recurring_task():
-#     session = SessionLocal()
-#     data = request.json
-#     rule = create_recurring_rule(session, data)
-#     session.close()
-#     return jsonify({
-#         "id": rule.id,
-#         "title": rule.title,
-#         "project_id": rule.project_id,
-#         "pattern": rule.pattern,
-#         "interval": rule.interval,
-#         "days": rule.days,
-#         "start_date": rule.start_date,
-#         "end_date": rule.end_date
-#     })
-
-@app.route("/tasks/delete_all", methods=["DELETE"])
+@app.route("/api/tasks/delete_all", methods=["DELETE"])
 def delete_all_tasks():
     session = SessionLocal()
     try:
@@ -213,5 +209,18 @@ def delete_all_tasks():
     finally:
         session.close()
 
+def get_local_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("8.8.8.8", 80))
+        return s.getsockname()[0]
+    except:
+        return "127.0.0.1"
+    finally:
+        s.close()
+
 if __name__ == "__main__":
-    app.run(host=os.getenv("HOST"), port=os.getenv("PORT"), debug=True)
+    ip = get_local_ip()
+    port = 5000
+    print(f"\n  App running at: http://{ip}:{port}\n")
+    app.run(host="0.0.0.0", port=port)

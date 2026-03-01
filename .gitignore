@@ -11,3 +11,19 @@ wheels/
 
 *.db
 .env
+
+mkdir -p .github/workflows
+```
+Create `.github/workflows/build.yml` and paste the yaml.
+
+### Step 2: Add `.gitignore`
+```
+*.spec
+dist/
+build/
+__pycache__/
+*.db
+*.sqlite
+*.sqlite3
+
+.DS_Store

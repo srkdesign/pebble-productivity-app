@@ -1,5 +1,3 @@
-import React from "react";
-
 interface PlusProps {
   size?: number;
   color?: string;

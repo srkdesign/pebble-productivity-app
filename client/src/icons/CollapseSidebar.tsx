@@ -1,5 +1,3 @@
-import React from "react";
-
 interface CollapseSidebarIconProps {
   size?: number;
   color?: string;

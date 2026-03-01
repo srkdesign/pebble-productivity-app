@@ -1,5 +1,3 @@
-import React from "react";
-
 interface ExpandSidebarIconProps {
   size?: number;
   color?: string;

@@ -21,6 +21,9 @@ export interface Task {
   version: number;
   project_id?: number;
   due_date?: number;
-  // --- Recurring task fields ---
-  source_recurring_id?: number;
+  recurring_rule?: {
+    pattern: string;
+    interval?: number;
+  };
+  completed_at?: number;
 }

@@ -161,10 +161,11 @@ export default function TaskItem({
     setEditingDue(false);
   };
 
-  const handleSave = async () => {
-    handleSaveTitle();
-    handleSaveProject();
-    handleSaveDueDate();
+  const handleSave = async (onClose?: () => void) => {
+    await handleSaveTitle();
+    await handleSaveProject();
+    await handleSaveDueDate();
+    onClose?.();
   };
 
   return (
@@ -172,9 +173,9 @@ export default function TaskItem({
       <CardBody>
         {" "}
         <div className="flex md:flex-row flex-col md:items-center justify-between p-2 gap-4 group">
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-2 md:gap-1">
             {/* Title */}
-            <div className="flex items-center gap-2 text-md">
+            <div className="flex items-center gap-2 text-md md:mb-0">
               {/* <input
                 checked={task.completed}
                 type="checkbox"
@@ -205,7 +206,7 @@ export default function TaskItem({
                   />
                 ) : (
                   <span
-                    className={`capitalize cursor-pointer text-md ${task.completed ? "line-through" : ""}`}
+                    className={`cursor-pointer text-md ${task.completed ? "line-through" : ""}`}
                     onDoubleClick={() => setEditingTitle(true)}
                   >
                     {task.title}
@@ -213,7 +214,7 @@ export default function TaskItem({
                 )}
               </Checkbox>
             </div>
-            <div className="flex gap-4 text-sm text-neutral-500">
+            <div className="flex gap-4 text-sm text-neutral-500 items-center justify-between">
               {/* Project */}
               <div className="flex gap-1 items-center">
                 <span>Project:</span>
@@ -272,8 +273,9 @@ export default function TaskItem({
 
               {task.recurring_rule && (
                 <div className="flex items-center gap-2">
-                  <RepeatIcon size={16} color="currentColor" />
-                  <p>
+                  <RepeatIcon color="currentColor" size={16} />
+                  <p className="capitalize md:normal-case">
+                    <span className="hidden md:inline">Repeats </span>
                     {formatRecurring(
                       task.recurring_rule.pattern,
                       task.recurring_rule.interval,

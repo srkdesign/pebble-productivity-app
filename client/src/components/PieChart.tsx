@@ -68,7 +68,9 @@ export default function ProjectPieChart({
             border: "none",
             boxShadow: "0 2px 12px rgba(0,0,0,0.1)",
           }}
-          formatter={(val: number) => formatTime(val)}
+          formatter={(val: number | undefined) =>
+            val != null ? formatTime(val) : ""
+          }
         />
         <Legend
           formatter={(value) => <span className="text-sm">{value}</span>}

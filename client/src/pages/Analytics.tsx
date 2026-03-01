@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardBody } from "@heroui/card";
+
 import WindRose from "@/components/WindRose";
 import ActivityHeatmap from "@/components/ActivityHeatmap";
 import { getTasks } from "@/api/tasks";
@@ -37,14 +38,14 @@ export default function Analytics() {
         <Card className="p-4 col-span-2 row-span-3" shadow="none">
           <CardBody className="flex flex-col items-center justify-center gap-8">
             {tasks.length > 0 && (
-              <CompletionRate tasks={tasks} projects={projects} />
+              <CompletionRate projects={projects} tasks={tasks} />
             )}
           </CardBody>
         </Card>
         <Card className="p-4 col-span-1 row-span-2" shadow="none">
           <CardBody className="flex flex-col items-center justify-center gap-8">
             {projects.length > 0 && (
-              <WindRose tasks={tasks} projects={projects} />
+              <WindRose projects={projects} tasks={tasks} />
             )}
           </CardBody>
         </Card>
@@ -52,8 +53,8 @@ export default function Analytics() {
           <CardBody className="flex flex-col items-center justify-center gap-8">
             {tasks.length > 0 && (
               <ProjectPieChart
-                tasks={tasks.filter((t) => t.completed)}
                 projects={projects}
+                tasks={tasks.filter((t) => t.completed)}
               />
             )}
           </CardBody>
@@ -67,14 +68,5 @@ export default function Analytics() {
         </Card>
       </div>
     </div>
-    // <div className="p-6 space-y-8">
-    //   <h2 className="text-xl font-bold">Task Activity Wind Rose</h2>
-    //   {projects.length > 0 && <WindRose tasks={tasks} projects={projects} />}
-
-    //   <h2 className="text-xl font-bold">Task Completion Heatmap</h2>
-    //   {tasks.length > 0 && (
-    //     <ActivityHeatmap tasks={tasks.filter((t) => t.completed)} />
-    //   )}
-    // </div>
   );
 }

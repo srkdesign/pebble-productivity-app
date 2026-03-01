@@ -8,8 +8,8 @@ const patternToUnit: Record<string, string> = {
 export default function formatRecurring(pattern: string, interval?: number) {
   const unit = patternToUnit[pattern] ?? pattern;
 
-  if (interval && interval > 1) return `Repeats every ${interval} ${unit}s`;
-  if (interval === 1) return `Repeats every ${unit}`;
+  if (interval && interval > 1) return `every ${interval} ${unit}s`;
+  if (interval === 1) return `every ${unit}`;
 
-  return `Repeats ${pattern}`; // fallback for no interval
+  return `${pattern}`; // fallback for no interval
 }

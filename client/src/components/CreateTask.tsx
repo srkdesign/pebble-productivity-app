@@ -141,7 +141,13 @@ export default function CreateTask({
           onValueChange={(v) => setInterval(v)}
         />
       )}
-      <Button color="primary" radius="md" size="lg" onPress={submit}>
+      <Button
+        className="w-full md:w-auto"
+        color="primary"
+        radius="md"
+        size="lg"
+        onPress={submit}
+      >
         Add Task
       </Button>
     </Form>

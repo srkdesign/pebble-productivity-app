@@ -1,25 +1,23 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import TaskItem from "./TaskItem";
+import { Task, Project } from "@api/types";
 
-interface Task {
-  id: number;
-  title: string;
-  completed: boolean;
-  is_running: boolean;
-  time_spent: number;
-  project_id: number;
-}
+import TaskItem from "./TaskItem";
 
 interface TaskTabsProps {
   tasks: Task[];
+  projects: Project[];
 }
 
-export default function TaskTabs({ tasks: initialTasks }: TaskTabsProps) {
+export default function TaskTabs({
+  tasks: initialTasks,
+  projects,
+}: TaskTabsProps) {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
 
   const refreshTasks = async () => {
-    const res = await axios.get("/tasks");
+    const res = await axios.get("/api/tasks");
+
     setTasks(res.data);
   };
 
@@ -30,7 +28,12 @@ export default function TaskTabs({ tasks: initialTasks }: TaskTabsProps) {
   return (
     <div className="flex flex-col gap-2">
       {tasks.map((task) => (
-        <TaskItem key={task.id} task={task} onUpdate={refreshTasks} />
+        <TaskItem
+          key={task.id}
+          projects={projects}
+          task={task}
+          onUpdate={refreshTasks}
+        />
       ))}
     </div>
   );

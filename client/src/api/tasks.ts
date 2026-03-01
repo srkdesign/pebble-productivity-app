@@ -3,9 +3,7 @@ import axios from "axios";
 
 import { Task } from "./types";
 
-import { HOST, PORT } from "@/config/env";
-
-const API = axios.create({ baseURL: `http://${HOST}:${PORT}` });
+const API = axios.create({ baseURL: `/api` });
 
 export const getTasks = async (projectId?: number): Promise<Task[]> => {
   const params = projectId ? { project_id: projectId } : {};

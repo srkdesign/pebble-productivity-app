@@ -7,14 +7,17 @@ import {
   ModalBody,
   ModalFooter,
   Button,
+  ButtonGroup,
   useDisclosure,
   Input,
   addToast,
 } from "@heroui/react";
 
-import { createProject, updateProject } from "../api/projects";
+import { createProject, updateProject, deleteProject } from "../api/projects";
 import Plus from "../icons/Plus";
 import EditIcon from "../icons/Edit";
+
+import TrashBin from "@/icons/TrashBin";
 import ExpandSidebarIcon from "@/icons/ExpandSidebar";
 import CollapseSidebarIcon from "@/icons/CollapseSidebar";
 
@@ -24,6 +27,7 @@ export default function ProjectSidebar({
   onSelect,
   onCreate,
   onUpdate,
+  onDelete,
 }: any) {
   const [name, setName] = useState("");
   const [color, setColor] = useState("#6566f1");
@@ -80,20 +84,30 @@ export default function ProjectSidebar({
     onClose();
   };
 
+  const handleDelete = async (p: any) => {
+    if (!confirm(`Delete project "${p.name}"?`)) return;
+    await deleteProject(p.id);
+    onDelete(p.id); // pass this prop from parent
+  };
+
   return (
     <Card
-      className={`md:sticky top-6 left-0 m-6 md:h-[calc(100dvh-7rem)] transition-all duration-300 ${collapsed ? "w-16" : "w-64"}`}
+      className={`md:sticky top-6 left-0 md:m-6 m-2 md:h-[calc(100dvh-7rem)] transition-all duration-300 ${collapsed ? "md:w-16" : "md:w-64"}`}
       shadow="none"
     >
       <CardBody>
-        <div className="flex flex-col p-2 gap-2">
+        <div className="flex flex-col p-2 gap-2 overflow-hidden md:overflow-visible">
           {/* Header */}
           <div
-            className={`${collapsed ? "" : "flex items-center justify-between"}`}
+            className={`flex flex-row items-center justify-between ${collapsed ? "md:flex-col " : "items-center justify-between"}`}
           >
-            {!collapsed && <h2 className="text-lg font-bold">Projects</h2>}
+            <h2
+              className={`text-xl md:text-lg font-bold ${collapsed ? "md:hidden md:opacity-0" : ""}`}
+            >
+              Projects
+            </h2>
             <div
-              className={`flex ${collapsed ? "flex-col" : "flex-row"} items-center gap-2`}
+              className={`flex ${collapsed ? "md:flex-col" : "flex-row"} items-center gap-2`}
             >
               <Button
                 isIconOnly
@@ -119,7 +133,7 @@ export default function ProjectSidebar({
 
           {/* Project list */}
           {collapsed ? (
-            <div className="flex flex-col items-center gap-3 mt-2">
+            <div className="flex md:flex-col items-center gap-3 mt-2 overflow-auto md:overflow-visible">
               {projects.map((p: any) => (
                 <Button
                   key={p.id}
@@ -153,15 +167,26 @@ export default function ProjectSidebar({
                     />
                     {p.name}
                   </Button>
-                  <Button
-                    isIconOnly
-                    className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100"
-                    size="sm"
-                    variant="light"
-                    onPress={() => openEdit(p)}
-                  >
-                    <EditIcon color="currentColor" size={20} />
-                  </Button>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 bg-zinc-800 rounded-lg">
+                    <ButtonGroup>
+                      <Button
+                        isIconOnly
+                        size="sm"
+                        variant="light"
+                        onPress={() => openEdit(p)}
+                      >
+                        <EditIcon color="currentColor" size={20} />
+                      </Button>
+                      <Button
+                        isIconOnly
+                        size="sm"
+                        variant="light"
+                        onPress={() => handleDelete(p)}
+                      >
+                        <TrashBin color="currentColor" size={20} />
+                      </Button>
+                    </ButtonGroup>
+                  </div>
                 </div>
               ))}
             </div>

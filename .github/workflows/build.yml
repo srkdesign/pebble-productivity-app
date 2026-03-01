@@ -1,0 +1,73 @@
+name: Build
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install frontend dependencies
+        run: npm install
+        working-directory: client
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: client
+
+      - name: Build executable (Mac/Linux)
+        if: runner.os != 'Windows'
+        run: uv run pyinstaller --onefile --add-data "server/static:static" server/app.py --name pebbleproductivityapp
+
+      - name: Build executable (Windows)
+        if: runner.os == 'Windows'
+        run: uv run pyinstaller --onefile --add-data "server/static;static" server/app.py --name pebbleproductivityapp
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pebbleproductivityapp-${{ matrix.os }}
+          path: |
+            dist/pebbleproductivityapp
+            dist/pebbleproductivityapp.exe
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            pebbleproductivityapp-ubuntu-latest/pebbleproductivityapp
+            pebbleproductivityapp-macos-latest/pebbleproductivityapp
+            pebbleproductivityapp-windows-latest/pebbleproductivityapp.exe

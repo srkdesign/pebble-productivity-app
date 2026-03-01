@@ -1,11 +1,5 @@
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
-import {
-  Navbar,
-  NavbarBrand,
-  NavbarContent,
-  NavbarItem,
-  Button,
-} from "@heroui/react";
+import { Routes, Route, Link } from "react-router-dom";
+import { NavbarItem } from "@heroui/react";
 
 import Dashboard from "./pages/Dashboard";
 import Calendar from "./pages/Calendar";

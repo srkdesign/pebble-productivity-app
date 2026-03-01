@@ -1,5 +1,3 @@
-import React from "react";
-
 interface RepeatIconProps {
   size?: number;
   color?: string;

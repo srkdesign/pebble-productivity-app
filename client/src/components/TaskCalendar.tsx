@@ -15,18 +15,6 @@ interface TaskCalendarProps {
   tasks: Task[];
 }
 
-// Convert a UNIX timestamp (seconds) or ISO string to JS Date
-function toDate(input: number | string | undefined): Date | null {
-  if (!input) return null;
-
-  if (typeof input === "number") {
-    return new Date(input * 1000); // convert seconds → ms
-  }
-
-  const parsed = new Date(input);
-  return isNaN(parsed.getTime()) ? null : parsed;
-}
-
 export default function TaskCalendar({ tasks }: TaskCalendarProps) {
   // Convert tasks to calendar events
   const events = tasks
@@ -34,7 +22,7 @@ export default function TaskCalendar({ tasks }: TaskCalendarProps) {
     .map((t) => ({
       id: t.id.toString(),
       title: t.title,
-      start: new Date(t.due_date * 1000),
+      start: new Date(t.due_date! * 1000),
       allDay: true,
       extendedProps: { projectId: t.project_id },
     }));
