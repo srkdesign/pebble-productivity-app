@@ -66,11 +66,16 @@ jobs:
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Display structure
+        run: ls -R artifacts
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            pebbleproductivityapp-ubuntu-latest/pebbleproductivityapp
-            pebbleproductivityapp-macos-latest/pebbleproductivityapp
-            pebbleproductivityapp-windows-latest/pebbleproductivityapp.exe
+            artifacts/pebbleproductivityapp-ubuntu-latest/pebbleproductivityapp
+            artifacts/pebbleproductivityapp-macos-latest/pebbleproductivityapp
+            artifacts/pebbleproductivityapp-windows-latest/pebbleproductivityapp.exe
