@@ -14,7 +14,17 @@ from server.models.recurring_task import RecurringTask
 
 # print("FLASK APP IS RUNNING")
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))   # /server
+import sys, os
+
+def get_base_dir():
+    if getattr(sys, 'frozen', False):
+        # Running as PyInstaller bundle
+        # sys._MEIPASS is where bundled files are extracted
+        return sys._MEIPASS
+    # Running as plain Python
+    return os.path.dirname(os.path.abspath(__file__))
+
+BASE_DIR = get_base_dir()   # /server
 STATIC_DIR = os.path.join(BASE_DIR, "static")  # server/static
 
 app = Flask(__name__, static_folder=None)
@@ -250,19 +260,3 @@ def delete_all_tasks():
 @app.route("/api/health")
 def health():
     return {"ok": True}
-
-def get_local_ip():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        s.connect(("8.8.8.8", 80))
-        return s.getsockname()[0]
-    except:
-        return "127.0.0.1"
-    finally:
-        s.close()
-
-if __name__ == "__main__":
-    ip = get_local_ip()
-    port = 5000
-    print(f"\n  App running at: http://{ip}:{port}\n")
-    app.run(host="0.0.0.0", port=port, ssl_context="adhoc")

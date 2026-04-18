@@ -70,9 +70,11 @@ export default function ProjectPieChart({
             border: "none",
             boxShadow: "0 2px 12px rgba(0,0,0,0.1)",
           }}
-          formatter={(val: number | undefined) =>
-            val != null ? formatTime(val) : ""
-          }
+          formatter={(val) => {
+            const num = typeof val === "number" ? val : Number(val);
+
+            return isNaN(num) ? "" : formatTime(num);
+          }}
         />
         <Legend
           formatter={(value) => <span className="text-sm">{value}</span>}

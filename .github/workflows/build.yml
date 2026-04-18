@@ -49,11 +49,11 @@ jobs:
 
       - name: Build executable (Mac/Linux)
         if: runner.os != 'Windows'
-        run: uv run pyinstaller --onefile --add-data "server/static:static" server/app.py --name pebbleproductivityapp
+        run: uv run pyinstaller --onefile --add-data "server/static:static" server/main.py --name pebbleproductivityapp
 
       - name: Build executable (Windows)
         if: runner.os == 'Windows'
-        run: uv run pyinstaller --onefile --add-data "server/static;static" server/app.py --name pebbleproductivityapp
+        run: uv run pyinstaller --onefile --add-data "server/static;static" server/main.py --name pebbleproductivityapp
 
       - name: Prepare artifacts per OS
         run: |
