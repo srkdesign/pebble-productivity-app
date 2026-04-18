@@ -14,3 +14,10 @@ export function toDate(input: number | string | undefined): Date | null {
 
   return parsed;
 }
+
+export const formatDate = (input: number | string | undefined) =>
+  toDate(input)?.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }) ?? "None";

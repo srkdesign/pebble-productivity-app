@@ -6,7 +6,8 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { Task, Project } from "@api/types";
+
+import { Task, Project } from "@/types";
 
 interface ProjectPieChartProps {
   tasks: Task[];
@@ -20,6 +21,7 @@ const formatTime = (seconds: number) => {
   const m = Math.floor((seconds % 3600) / 60)
     .toString()
     .padStart(2, "0");
+
   return `${h}h ${m}m`;
 };
 

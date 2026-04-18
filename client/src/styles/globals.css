@@ -1,5 +1,130 @@
 @import "tailwindcss";
-@plugin '../hero.ts';
+@import "@heroui/styles";
 
 @source '../../node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}';
-@custom-variant dark (&:is(.dark *));
+@variant dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));
+
+.color-swatch {
+  background: none;
+}
+
+:root {
+  --button-fg: none !important;
+  --color-accent-soft-foreground: none !important;
+  @apply font-medium;
+}
+
+@layer components {
+  .button--icon-only svg {
+    max-width: unset !important;
+    max-height: unset !important;
+  }
+}
+
+@font-face {
+  font-family: AveriaLibre;
+  src: url("/fonts/AveriaLibre-Bold.woff2");
+}
+
+@font-face {
+  font-family: Manrope;
+  src: url("/fonts/Manrope.ttf");
+}
+
+@theme {
+  --font-display: AveriaLibre, sans-serif;
+  --font-serif: Cactus, serif;
+  --font-sans: Manrope, sans-serif;
+}
+
+@layer components {
+  .button--primary {
+    @apply bg-zinc-800 text-zinc-50 hover:bg-zinc-400;
+  }
+}
+
+@layer components {
+  .dark .button--primary,
+  [data-theme="dark"] .button--primary {
+    @apply bg-zinc-100 text-zinc-950 hover:bg-zinc-400;
+  }
+}
+
+.fc .fc-toolbar-title {
+  @apply font-bold tracking-tight;
+}
+
+.fc .fc-button {
+  @apply bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 border-none rounded-full min-h-9 text-zinc-950 dark:text-zinc-50;
+}
+
+.fc-h-event {
+  @apply px-1 py-px;
+}
+
+.fc .fc-button .fc-icon {
+  @apply text-zinc-950 dark:text-zinc-50;
+}
+
+.fc .fc-daygrid-day-events {
+  @apply flex flex-col gap-1 px-2;
+}
+
+.fc .fc-event {
+  @apply rounded-full p-0.5;
+}
+
+.fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
+  @apply bg-zinc-100 dark:bg-zinc-600 px-2 w-8 rounded-full aspect-square;
+}
+
+.fc .fc-h-event .fc-event-title-container {
+  @apply px-1;
+}
+
+.fc .fc-daygrid-day {
+  @apply border border-zinc-100 dark:border-zinc-700/50;
+}
+
+.fc .fc-daygrid-day-top {
+  @apply flex-row md:p-2;
+}
+
+.fc .fc-col-header-cell {
+  @apply border-b border-zinc-100 dark:border-zinc-700/50;
+}
+
+.fc-header-toolbar {
+  @apply p-6;
+}
+
+/* Override default heatmap styles */
+.react-calendar-heatmap .color-empty {
+  @apply fill-zinc-100 dark:fill-zinc-800;
+}
+
+.react-calendar-heatmap .color-github-1 {
+  @apply fill-zinc-300 dark:fill-zinc-600;
+}
+
+.react-calendar-heatmap .color-github-2 {
+  @apply fill-zinc-500 dark:fill-zinc-400;
+}
+
+.react-calendar-heatmap .color-github-3 {
+  @apply fill-zinc-700 dark:fill-zinc-200;
+}
+
+.react-calendar-heatmap .color-github-4 {
+  @apply fill-zinc-900 dark:fill-zinc-50;
+}
+
+/* Remove default rect stroke */
+.react-calendar-heatmap rect {
+  rx: 2px;
+}
+
+/* Text color for month/day labels */
+.react-calendar-heatmap text {
+  @apply text-[8px] fill-zinc-400 dark:fill-zinc-600;
+}

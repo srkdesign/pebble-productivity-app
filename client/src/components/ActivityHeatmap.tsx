@@ -1,6 +1,6 @@
 import CalendarHeatmap from "react-calendar-heatmap";
 
-import { Task } from "@/api/types";
+import { Task } from "@/types";
 
 import "react-calendar-heatmap/dist/styles.css";
 import "../styles/heatmap.css";

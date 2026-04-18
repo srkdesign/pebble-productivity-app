@@ -6,10 +6,10 @@ interface EditIconProps {
 const EditIcon = ({ size = 24, color = "#fff" }: EditIconProps) => {
   return (
     <svg
-      width={size}
+      fill={color}
       height={size}
       viewBox="0 0 24 24"
-      fill={color}
+      width={size}
       xmlns="http://www.w3.org/2000/svg"
     >
       <g clipPath="url(#clip0_4418_8500)">
@@ -31,7 +31,7 @@ const EditIcon = ({ size = 24, color = "#fff" }: EditIconProps) => {
       </g>
       <defs>
         <clipPath id="clip0_4418_8500">
-          <rect width="24" height="24" fill="white" />
+          <rect fill="white" height="24" width="24" />
         </clipPath>
       </defs>
     </svg>

@@ -1,19 +1,5 @@
+/* eslint-disable jsx-a11y/no-autofocus */
 import { useState, useEffect, useRef } from "react";
-import { Card, CardBody } from "@heroui/card";
-import { Button, ButtonGroup } from "@heroui/button";
-import { Checkbox } from "@heroui/react";
-import {
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  Input,
-  Select,
-  SelectItem,
-  useDisclosure,
-} from "@heroui/react";
-import { Task, Project } from "@api/types";
 import {
   toggleComplete,
   deleteTask,
@@ -21,13 +7,37 @@ import {
   stopTimer,
   updateTask,
 } from "@api/tasks";
+import { parseDate, CalendarDate } from "@internationalized/date";
 import formatRecurring from "@utils/recurring";
+import {
+  Calendar,
+  Card,
+  DateField,
+  DatePicker,
+  Button,
+  ButtonGroup,
+  Checkbox,
+  Modal,
+  Select,
+  ListBox,
+  TextField,
+  Input,
+  useOverlayState,
+} from "@heroui/react";
+import {
+  TrashBin,
+  PlayButton,
+  Pause,
+  RepeatIcon,
+  EditIcon,
+  Folder,
+  CalendarIcon,
+  TimerIcon,
+} from "@icons";
 
-import TrashBin from "../icons/TrashBin";
-import PlayButton from "../icons/PlayButton";
-import Pause from "../icons/Pause";
-import RepeatIcon from "../icons/Repeat";
-import EditIcon from "../icons/Edit";
+import { Task, Project } from "@/types";
+import { useSoundStore } from "@/stores/soundStore";
+import { formatDate } from "@/utils/date";
 
 interface TaskItemProps {
   task: Task;
@@ -41,7 +51,10 @@ export default function TaskItem({
   onUpdate,
 }: TaskItemProps) {
   const [task, setTask] = useState<Task>(initialTask);
-  const { isOpen, onOpen, onOpenChange } = useDisclosure();
+  const [isActive, setIsActive] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const editState = useOverlayState();
+  const deleteState = useOverlayState();
   const [title, setTitle] = useState(initialTask.title);
   const [editingTitle, setEditingTitle] = useState(false);
 
@@ -58,7 +71,27 @@ export default function TaskItem({
   const [timeSpent, setTimeSpent] = useState(initialTask.time_spent ?? 0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // --- Live timer effect ---
+  const { play } = useSoundStore();
+
+  // Dismiss active state when clicking outside the card
+  useEffect(() => {
+    if (!isActive) return;
+
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
+        setIsActive(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [isActive]);
+
   useEffect(() => {
     setTask(initialTask);
     setTitle(initialTask.title);
@@ -89,6 +122,9 @@ export default function TaskItem({
     };
   }, [initialTask]);
 
+  const toCalendarDate = (str: string) => (str ? parseDate(str) : null);
+  const fromCalendarDate = (d: CalendarDate | null) => (d ? d.toString() : "");
+
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600)
       .toString()
@@ -103,12 +139,12 @@ export default function TaskItem({
     return `${h}:${m}:${s}`;
   };
 
-  // --- Handlers ---
   const handleToggleComplete = async () => {
     const updated = await toggleComplete(task.id);
 
     setTask(updated);
     onUpdate();
+    play("sounds/completed.mp3");
   };
 
   const handleToggleTimer = async () => {
@@ -121,10 +157,9 @@ export default function TaskItem({
   };
 
   const handleDelete = async () => {
-    if (confirm("Delete this task?")) {
-      await deleteTask(task.id);
-      onUpdate();
-    }
+    deleteTask(task.id);
+    onUpdate();
+    deleteState.close();
   };
 
   const handleSaveTitle = async () => {
@@ -161,217 +196,318 @@ export default function TaskItem({
     setEditingDue(false);
   };
 
-  const handleSave = async (onClose?: () => void) => {
+  const handleSave = async (close?: () => void) => {
     await handleSaveTitle();
     await handleSaveProject();
     await handleSaveDueDate();
-    onClose?.();
+    close?.();
+  };
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't toggle if the user clicked a button, input, or interactive element
+    const target = e.target as HTMLElement;
+    const isInteractive = target.closest("button, input, select, a, label");
+
+    if (!isInteractive) {
+      setIsActive((v) => !v);
+    }
   };
 
   return (
-    <Card shadow="none">
-      <CardBody>
-        {" "}
-        <div className="flex md:flex-row flex-col md:items-center justify-between p-2 gap-4 group">
-          <div className="flex flex-col gap-2 md:gap-1">
-            {/* Title */}
-            <div className="flex items-center gap-2 text-md md:mb-0">
-              {/* <input
-                checked={task.completed}
-                type="checkbox"
-                onChange={handleToggleComplete}
-              /> */}
-              <Checkbox
-                classNames={{
-                  wrapper: "after:bg-[var(--project-color)]",
-                }}
-                isSelected={task.completed}
-                radius="full"
-                style={
-                  {
-                    "--project-color": projects.find((p) => p.id === projectId)
-                      ?.color,
-                  } as React.CSSProperties
-                }
-                onChange={handleToggleComplete}
-              >
-                {editingTitle ? (
-                  <input
-                    autoFocus
-                    className="p-1 rounded"
-                    value={title}
-                    onBlur={handleSaveTitle}
-                    onChange={(e) => setTitle(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleSaveTitle()}
-                  />
-                ) : (
-                  <span
-                    className={`cursor-pointer text-md ${task.completed ? "line-through" : ""}`}
-                    onDoubleClick={() => setEditingTitle(true)}
-                  >
-                    {task.title}
-                  </span>
-                )}
-              </Checkbox>
-            </div>
-            <div className="flex gap-4 text-sm text-neutral-500 items-center justify-between md:justify-start">
-              {/* Project */}
-              <div className="flex gap-1 items-center">
-                <span>Project:</span>
-                {editingProject ? (
-                  <select
-                    autoFocus
-                    value={projectId}
-                    onBlur={handleSaveProject}
-                    onChange={(e) => setProjectId(Number(e.target.value))}
-                  >
-                    {projects.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <span
-                    className="cursor-pointer underline"
-                    onDoubleClick={() => setEditingProject(true)}
-                  >
-                    {projects.find((p) => p.id === projectId)?.name || "None"}
-                  </span>
-                )}
+    <div ref={cardRef}>
+      <Card className="shadow-none rounded-3xl" onClick={handleCardClick}>
+        <Card.Content>
+          <div className="flex md:items-center justify-between p-1 gap-4 group">
+            <div className="w-full flex flex-col gap-2 md:gap-1">
+              {/* Title row with Checkbox */}
+              <div className="flex items-center gap-2 text-md md:mb-0">
+                <Checkbox
+                  isSelected={task.completed}
+                  style={
+                    {
+                      "--accent": projects.find((p) => p.id === projectId)
+                        ?.color,
+                    } as React.CSSProperties
+                  }
+                  onChange={handleToggleComplete}
+                >
+                  <Checkbox.Control className="size-5 rounded-full shadow-none  dark:bg-zinc-800 bg-zinc-100">
+                    <Checkbox.Indicator />
+                  </Checkbox.Control>
+
+                  <Checkbox.Content>
+                    {editingTitle ? (
+                      <input
+                        autoFocus
+                        className="p-1 rounded"
+                        value={title}
+                        onBlur={handleSaveTitle}
+                        onChange={(e) => setTitle(e.target.value)}
+                        onKeyDown={(e) =>
+                          e.key === "Enter" && handleSaveTitle()
+                        }
+                      />
+                    ) : (
+                      <span
+                        className={`cursor-pointer text-md ${task.completed ? "line-through " : ""}`}
+                        onDoubleClick={() => setEditingTitle(true)}
+                      >
+                        {task.title}
+                      </span>
+                    )}
+                  </Checkbox.Content>
+                </Checkbox>
               </div>
-              {/* Due date - only for non-recurring tasks */}
-              {!task.recurring_rule && (
-                <div className="flex gap-1 items-center">
-                  <span>Due:</span>
-                  {editingDue ? (
-                    <input
+
+              {/* Metadata row */}
+              <div className="ml-7 w-auto flex gap-4 text-sm text-neutral-500 items-center justify-start overflow-x-scroll md:overflow-x-hidden *:whitespace-nowrap">
+                {/* Inline project editor */}
+                <div className="flex gap-1.5 items-center">
+                  <Folder color="currentColor" size={16} />
+                  {editingProject ? (
+                    <select
                       autoFocus
-                      type="date"
-                      value={dueDate}
-                      onBlur={handleSaveDueDate}
-                      onChange={(e) => setDueDate(e.target.value)}
-                    />
+                      value={projectId}
+                      onBlur={handleSaveProject}
+                      onChange={(e) => setProjectId(Number(e.target.value))}
+                    >
+                      {projects.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
                   ) : (
                     <span
                       className="cursor-pointer underline"
-                      onDoubleClick={() => setEditingDue(true)}
+                      onDoubleClick={() => setEditingProject(true)}
                     >
-                      {dueDate || "None"}
+                      {projects.find((p) => p.id === projectId)?.name || "None"}
                     </span>
                   )}
                 </div>
-              )}
 
-              {/* Time spent */}
-              <span>
-                <span className="hidden md:inline-block mr-1">
-                  Time Spent:{" "}
-                </span>
-                {formatTime(timeSpent)}
-              </span>
-
-              {task.recurring_rule && (
-                <div className="flex items-center gap-2">
-                  <RepeatIcon color="currentColor" size={16} />
-                  <p className="capitalize md:normal-case">
-                    <span className="hidden md:inline">Repeats </span>
-                    {formatRecurring(
-                      task.recurring_rule.pattern,
-                      task.recurring_rule.interval,
+                {/* Inline due date editor */}
+                {!task.recurring_rule && task.due_date !== null && (
+                  <div className="flex gap-1.5 items-center">
+                    <CalendarIcon color="currentColor" size={18} />
+                    {editingDue ? (
+                      <input
+                        autoFocus
+                        type="date"
+                        value={dueDate}
+                        onBlur={handleSaveDueDate}
+                        onChange={(e) => setDueDate(e.target.value)}
+                      />
+                    ) : (
+                      <span
+                        className="cursor-pointer underline"
+                        onDoubleClick={() => setEditingDue(true)}
+                      >
+                        {formatDate(dueDate) || "None"}
+                      </span>
                     )}
-                  </p>
-                </div>
-              )}
+                  </div>
+                )}
+
+                {/* Time spent */}
+                <span className="flex gap-1 items-center">
+                  <TimerIcon color="currentColor" size={19} />
+                  {formatTime(timeSpent)}
+                </span>
+
+                {/* Recurring label */}
+                {task.recurring_rule && (
+                  <div className="flex items-center gap-1.5">
+                    <RepeatIcon color="currentColor" size={16} />
+                    <p className="capitalize md:normal-case">
+                      <span className="hidden md:inline">Repeats </span>
+                      {formatRecurring(
+                        task.recurring_rule.pattern,
+                        task.recurring_rule.interval,
+                      )}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Action buttons — hover on desktop, tap-to-reveal on mobile */}
+            <div
+              className={`md:flex gap-2 ${isActive ? "absolute right-0 top-1/2 -translate-y-1/2 bg-linear-to-r from-transparent via-white to-white dark:via-zinc-900 dark:to-zinc-900 p-36 pr-4" : ""}`}
+            >
+              <ButtonGroup
+                className={`[&_button]:rounded-full gap-2 transition-opacity
+                  ${isActive ? "opacity-100" : "opacity-0"}
+                  md:opacity-0 md:group-hover:opacity-100`}
+              >
+                <Button
+                  isIconOnly
+                  variant="secondary"
+                  onPress={handleToggleTimer}
+                >
+                  {task.is_running ? (
+                    <Pause size={20} />
+                  ) : (
+                    <PlayButton size={22} />
+                  )}
+                </Button>
+                <Button isIconOnly variant="secondary" onPress={editState.open}>
+                  <EditIcon color="currentColor" size={22} />
+                </Button>
+                <Button
+                  isIconOnly
+                  variant="danger-soft"
+                  onPress={deleteState.open}
+                >
+                  <TrashBin color="#ec003f" size={20} />
+                </Button>
+              </ButtonGroup>
             </div>
           </div>
 
-          {/* Timer & Delete */}
-          <div className="flex gap-2">
-            <ButtonGroup className="w-full *:w-full md:opacity-0 md:group-hover:opacity-100">
-              <Button
-                isIconOnly
-                color="default"
-                size="md"
-                variant="flat"
-                onPress={handleToggleTimer}
-              >
-                {task.is_running ? (
-                  <Pause size={20} />
-                ) : (
-                  <PlayButton size={22} />
-                )}
-              </Button>
-              <Button
-                isIconOnly
-                color="default"
-                variant="flat"
-                onPress={onOpen}
-              >
-                <EditIcon color="currentColor" size={22} />
-              </Button>
-              <Button
-                isIconOnly
-                color="danger"
-                variant="flat"
-                onPress={handleDelete}
-              >
-                <TrashBin color="#ec003f" size={20} />
-              </Button>
-            </ButtonGroup>
-          </div>
-        </div>
-        {/* Edit Modal */}
-        <Modal
-          isOpen={isOpen}
-          placement="top-center"
-          onOpenChange={onOpenChange}
-        >
-          <ModalContent>
-            {(onClose) => (
-              <>
-                <ModalHeader>Edit Task</ModalHeader>
-                <ModalBody>
-                  <Input
-                    autoFocus
-                    label="Title"
-                    value={title}
-                    onValueChange={setTitle}
-                    onKeyDown={(e) => e.key === "Enter" && handleSave(onClose)}
-                  />
-                  <Select
-                    label="Project"
-                    selectedKeys={projectId ? [String(projectId)] : []}
-                    onSelectionChange={(keys) =>
-                      setProjectId(Number(Array.from(keys)[0]))
-                    }
-                  >
-                    {projects.map((p) => (
-                      <SelectItem key={String(p.id)}>{p.name}</SelectItem>
-                    ))}
-                  </Select>
-                  {!task.recurring_rule && (
-                    <Input
-                      label="Due Date"
-                      type="date"
-                      value={dueDate}
-                      onValueChange={setDueDate}
-                    />
+          {/* Edit Modal — v3 compound pattern */}
+          <Modal state={editState}>
+            <Modal.Backdrop>
+              <Modal.Container placement="center">
+                <Modal.Dialog>
+                  {({ close }) => (
+                    <>
+                      <Modal.Header>
+                        <Modal.Heading>Edit Task</Modal.Heading>
+                        <Modal.CloseTrigger />
+                      </Modal.Header>
+                      <Modal.Body className="flex flex-col gap-4 overflow-visible pt-4">
+                        <TextField
+                          autoFocus
+                          aria-label="Project name"
+                          className="gap-2 [&_input]:h-11"
+                          value={title}
+                          variant="secondary"
+                          onChange={setTitle}
+                        >
+                          <Input placeholder="Project name" />
+                        </TextField>
+
+                        <Select
+                          className="[&_button]:h-11 [&_button]:items-center"
+                          placeholder="Project"
+                          value={projectId ? String(projectId) : ""}
+                          variant="secondary"
+                          onChange={(v) => setProjectId(Number(v))}
+                        >
+                          <Select.Trigger>
+                            <Select.Value />
+                            <Select.Indicator />
+                          </Select.Trigger>
+                          <Select.Popover>
+                            <ListBox>
+                              {projects.map((p: any) => (
+                                <ListBox.Item
+                                  key={String(p.id)}
+                                  id={String(p.id)}
+                                  textValue={p.name}
+                                >
+                                  {p.name}
+                                  <ListBox.ItemIndicator />
+                                </ListBox.Item>
+                              ))}
+                            </ListBox>
+                          </Select.Popover>
+                        </Select>
+
+                        {!task.recurring_rule && (
+                          <DatePicker
+                            aria-label="Due Date"
+                            className="[&_div]:h-11"
+                            value={toCalendarDate(dueDate)}
+                            onChange={(d) => setDueDate(fromCalendarDate(d))}
+                          >
+                            <DateField.Group variant="secondary">
+                              <DateField.Input>
+                                {(segment) => (
+                                  <DateField.Segment segment={segment} />
+                                )}
+                              </DateField.Input>
+                              <DateField.Suffix>
+                                <DatePicker.Trigger>
+                                  <DatePicker.TriggerIndicator />
+                                </DatePicker.Trigger>
+                              </DateField.Suffix>
+                            </DateField.Group>
+                            <DatePicker.Popover>
+                              <Calendar aria-label="Choose due date">
+                                <Calendar.Header>
+                                  <Calendar.NavButton slot="previous" />
+                                  <Calendar.YearPickerTrigger>
+                                    <Calendar.YearPickerTriggerHeading />
+                                  </Calendar.YearPickerTrigger>
+                                  <Calendar.NavButton slot="next" />
+                                </Calendar.Header>
+                                <Calendar.Grid>
+                                  <Calendar.GridHeader>
+                                    {(day) => (
+                                      <Calendar.HeaderCell>
+                                        {day}
+                                      </Calendar.HeaderCell>
+                                    )}
+                                  </Calendar.GridHeader>
+                                  <Calendar.GridBody>
+                                    {(date) => <Calendar.Cell date={date} />}
+                                  </Calendar.GridBody>
+                                </Calendar.Grid>
+                              </Calendar>
+                            </DatePicker.Popover>
+                          </DatePicker>
+                        )}
+                      </Modal.Body>
+                      <Modal.Footer>
+                        <Button variant="secondary" onPress={close}>
+                          Cancel
+                        </Button>
+                        <Button
+                          variant="primary"
+                          onPress={() => handleSave(close)}
+                        >
+                          Save
+                        </Button>
+                      </Modal.Footer>
+                    </>
                   )}
-                </ModalBody>
-                <ModalFooter>
-                  <Button variant="flat" onPress={onClose}>
-                    Cancel
-                  </Button>
-                  <Button color="primary" onPress={() => handleSave(onClose)}>
-                    Save
-                  </Button>
-                </ModalFooter>
-              </>
-            )}
-          </ModalContent>
-        </Modal>
-      </CardBody>
-    </Card>
+                </Modal.Dialog>
+              </Modal.Container>
+            </Modal.Backdrop>
+          </Modal>
+
+          {/* Delete Modal — v3 compound pattern */}
+          <Modal state={deleteState}>
+            <Modal.Backdrop>
+              <Modal.Container placement="center">
+                <Modal.Dialog>
+                  {({ close }) => (
+                    <>
+                      <Modal.Header>
+                        <Modal.Heading className="mr-6">
+                          Are you sure you want to delete &quot;{title}&quot;?
+                        </Modal.Heading>
+                        <Modal.CloseTrigger />
+                      </Modal.Header>
+                      <Modal.Footer>
+                        <Button variant="secondary" onPress={close}>
+                          Cancel
+                        </Button>
+                        <Button variant="danger" onPress={() => handleDelete()}>
+                          Delete
+                        </Button>
+                      </Modal.Footer>
+                    </>
+                  )}
+                </Modal.Dialog>
+              </Modal.Container>
+            </Modal.Backdrop>
+          </Modal>
+        </Card.Content>
+      </Card>
+    </div>
   );
 }

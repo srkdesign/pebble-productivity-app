@@ -6,7 +6,8 @@ import {
   PolarRadiusAxis,
   ResponsiveContainer,
 } from "recharts";
-import { Task, Project } from "@api/types";
+
+import { Task, Project } from "@/types";
 
 interface WindRoseProps {
   tasks: Task[];
@@ -27,17 +28,17 @@ export default function WindRose({ tasks, projects }: WindRoseProps) {
   });
 
   return (
-    <ResponsiveContainer width="100%" height={400}>
-      <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
+    <ResponsiveContainer height={400} width="100%">
+      <RadarChart cx="50%" cy="50%" data={data} outerRadius="80%">
         <PolarGrid />
         <PolarAngleAxis dataKey="project" />
         <PolarRadiusAxis />
         <Radar
-          name="Completed Tasks"
           dataKey="completed"
-          stroke="#8884d8"
           fill="#8884d8"
           fillOpacity={0.6}
+          name="Completed Tasks"
+          stroke="#8884d8"
         />
       </RadarChart>
     </ResponsiveContainer>

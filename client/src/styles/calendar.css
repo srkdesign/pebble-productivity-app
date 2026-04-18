@@ -1,5 +1,4 @@
 /* fullcalendar-theme.css */
-
 .fc {
   --fc-border-color: hsl(var(--heroui-default-200));
   --fc-button-bg-color: hsl(var(--heroui-default-100));
@@ -39,4 +38,24 @@
 
 .fc .fc-button:focus {
   box-shadow: none;
+}
+
+@media screen and (max-width: 425px) {
+  .fc-header-toolbar {
+    flex-direction: column;
+    align-items: start;
+  }
+
+  .fc-toolbar-chunk {
+    width: 100%;
+  }
+
+  .fc-toolbar-chunk:first-of-type {
+    margin-bottom: 1rem;
+  }
+
+  .fc-toolbar-chunk:last-of-type {
+    display: flex;
+    justify-content: space-between;
+  }
 }

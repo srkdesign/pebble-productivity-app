@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { Task, Project } from "@api/types";
 
 import TaskItem from "./TaskItem";
+
+import { Task, Project } from "@/types";
 
 interface TaskTabsProps {
   tasks: Task[];

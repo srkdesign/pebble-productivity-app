@@ -12,8 +12,15 @@ from server.services.task_service import start_timer, stop_timer
 from server.services.recurring_service import create_recurring_rule, generate_recurring_tasks
 from server.models.recurring_task import RecurringTask
 
-app = Flask(__name__, static_folder="static", static_url_path="")
+# print("FLASK APP IS RUNNING")
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))   # /server
+STATIC_DIR = os.path.join(BASE_DIR, "static")  # server/static
+
+app = Flask(__name__, static_folder=None)
 CORS(app)
+
+app.url_map.strict_slashes = False
 
 # create tables + default project
 Base.metadata.create_all(engine)
@@ -21,14 +28,31 @@ session = SessionLocal()
 ensure_default_project(session)
 session.close()
 
+# app.py - add ABOVE the existing serve() route
+
+@app.route("/sw.js")
+def service_worker():
+    response = send_from_directory(
+        STATIC_DIR,
+        "sw.js",
+        mimetype="application/javascript"
+    )
+    # allow full scope
+    response.headers["Service-Worker-Allowed"] = "/"
+
+    return response
+
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
 def serve(path):
-    if path.startswith("api/"):
-        return {"error": "Not found"}, 404
-    if path and os.path.exists(os.path.join(app.static_folder, path)):
-        return send_from_directory(app.static_folder, path)
-    return send_from_directory(app.static_folder, "index.html")
+    file_path = os.path.join(STATIC_DIR, path)
+    if path and os.path.isfile(file_path):
+        return send_from_directory(STATIC_DIR, path)
+    
+    # Serve React index.html
+    response = send_from_directory(STATIC_DIR, "index.html")
+    response.headers["Cache-Control"] = "public, max-age=31536000"
+    return response
 
 @app.route("/api/projects", methods=["GET"])
 def get_projects():
@@ -41,14 +65,19 @@ def get_projects():
 @app.route("/api/projects", methods=["POST"])
 def create_project_route():
     session = SessionLocal()
-
     name = request.json["name"]
     color = request.json.get("color", "#6366f1")
+    
+    # ✅ check if project already exists (duplicate sync attempt)
+    existing = session.query(Project).filter(Project.name == name).first()
+    if existing:
+        data = serialize_project(existing)
+        session.close()
+        return jsonify(data)  # return existing project instead of erroring
+    
     project = create_project(session, name, color)
-
     data = serialize_project(project)
     session.close()
-
     return jsonify(data)
 
 @app.route("/api/projects/<int:project_id>", methods=["PATCH"])
@@ -188,6 +217,15 @@ def update_task(task_id):
         task.project_id = data["project_id"]
     if "due_date" in data:
         task.due_date = data["due_date"]
+    if "completed" in data:
+        task.completed = data["completed"]
+        task.completed_at = int(time.time()) if data["completed"] else None
+    if "is_running" in data:
+        task.is_running = data["is_running"]
+    if "last_start" in data:
+        task.last_start = data["last_start"]
+    if "time_spent" in data:
+        task.time_spent = data["time_spent"]
     task.updated_at = int(time.time())
     session.commit()
     result = serialize_task(task)
@@ -209,6 +247,10 @@ def delete_all_tasks():
     finally:
         session.close()
 
+@app.route("/api/health")
+def health():
+    return {"ok": True}
+
 def get_local_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
@@ -223,4 +265,4 @@ if __name__ == "__main__":
     ip = get_local_ip()
     port = 5000
     print(f"\n  App running at: http://{ip}:{port}\n")
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port, ssl_context="adhoc")

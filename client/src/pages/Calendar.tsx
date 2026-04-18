@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { Card, CardBody } from "@heroui/card";
-
-import TaskCalendar from "@components/TaskCalendar";
-import { getTasks } from "../api/tasks";
+import { Card } from "@heroui/react";
+import { TaskCalendar } from "@components/index";
+import { getTasks } from "@api/tasks";
+import { getProjects } from "@api/projects";
 
 export default function CalendarPage() {
   const [tasks, setTasks] = useState<any[]>([]);
@@ -10,17 +10,26 @@ export default function CalendarPage() {
   useEffect(() => {
     async function fetchTasks() {
       const data = await getTasks();
+
       setTasks(data);
     }
     fetchTasks();
   }, []);
 
+  const [projects, setProjects] = useState<any[]>([]);
+
+  useEffect(() => {
+    getProjects().then((p) => {
+      setProjects(p);
+    });
+  }, []);
+
   return (
-    <div className="md:flex w-full bg-zinc-100 dark:bg-zinc-950">
-      <Card shadow="none" className="h-[calc(100dvh-7rem)] m-6 w-full">
-        <CardBody>
-          <TaskCalendar tasks={tasks} />
-        </CardBody>
+    <div className="md:flex w-full p-2 md:p-6">
+      <Card className="h-[calc(100dvh-7rem)] p-0 w-full shadow-none">
+        <Card.Content>
+          <TaskCalendar projects={projects} tasks={tasks} />
+        </Card.Content>
       </Card>
     </div>
   );

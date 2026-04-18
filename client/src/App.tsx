@@ -1,5 +1,6 @@
-import { Routes, Route, Link } from "react-router-dom";
-import { NavbarItem } from "@heroui/react";
+import { Routes, Route } from "react-router-dom";
+// import { NavbarItem } from "@heroui/react";
+import { Toast } from "@heroui/react";
 
 import Dashboard from "./pages/Dashboard";
 import Calendar from "./pages/Calendar";
@@ -9,25 +10,9 @@ import Header from "./components/Header";
 function App() {
   return (
     <div className="flex flex-col h-screen">
-      <Header>
-        <NavbarItem>
-          <Link to="/" className="p-2 rounded">
-            Tasks
-          </Link>
-        </NavbarItem>
-        <NavbarItem>
-          <Link to="/calendar" className="p-2 rounded">
-            Calendar
-          </Link>
-        </NavbarItem>
-        <NavbarItem>
-          <Link to="/analytics" className="p-2 rounded">
-            Analytics
-          </Link>
-        </NavbarItem>
-      </Header>
-
-      <main className="flex-1 overflow-auto">
+      <Toast.Provider />
+      <Header />
+      <main className="flex-1 overflow-auto bg-zinc-100 dark:bg-zinc-950 overflow-y-scroll">
         <Routes>
           <Route element={<Dashboard />} path="/" />
           <Route element={<Calendar />} path="/calendar" />

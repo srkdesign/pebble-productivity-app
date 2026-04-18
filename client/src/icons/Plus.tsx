@@ -6,10 +6,10 @@ interface PlusProps {
 const Plus = ({ size = 24, color = "#fff" }: PlusProps) => {
   return (
     <svg
-      width={size}
+      fill={color}
       height={size}
       viewBox="0 0 24 24"
-      fill={color}
+      width={size}
       xmlns="http://www.w3.org/2000/svg"
     >
       <g clipPath="url(#clip0_4418_7356)">
@@ -26,7 +26,7 @@ const Plus = ({ size = 24, color = "#fff" }: PlusProps) => {
       </g>
       <defs>
         <clipPath id="clip0_4418_7356">
-          <rect width="24" height="24" fill="white" />
+          <rect height="24" width="24" />
         </clipPath>
       </defs>
     </svg>

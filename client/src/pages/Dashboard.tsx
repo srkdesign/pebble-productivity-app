@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
-
-import ProjectSidebar from "../components/ProjectSidebar";
-import TaskPanel from "../components/TaskPanel";
-import { getProjects } from "../api/projects";
+import { ProjectSidebar, TaskPanel } from "@components/index";
+import { getProjects } from "@api/projects";
 
 export default function Dashboard() {
   const [projects, setProjects] = useState<any[]>([]);
@@ -22,15 +20,17 @@ export default function Dashboard() {
   const handleDeleteProject = (id: number) => {
     setProjects((prev) => {
       const remaining = prev.filter((p) => p.id !== id);
+
       if (activeProject === id) {
         setActiveProject(remaining[0]?.id ?? null);
       }
+
       return remaining;
     });
   };
 
   return (
-    <div className="flex md:flex-row flex-col gap-10 min-h-screen bg-zinc-100 dark:bg-zinc-950">
+    <div className="flex md:flex-row flex-col md:gap-6 gap-2 min-h-screen  md:p-6 p-2">
       <ProjectSidebar
         active={activeProject}
         projects={projects}
@@ -38,12 +38,12 @@ export default function Dashboard() {
           setProjects((prev) => [...prev, p]);
           setActiveProject(p.id);
         }}
+        onDelete={handleDeleteProject}
         onSelect={setActiveProject}
         onUpdate={handleUpdate}
-        onDelete={handleDeleteProject}
       />
 
-      <TaskPanel projects={projects} projectId={activeProject} />
+      <TaskPanel projectId={activeProject} projects={projects} />
     </div>
   );
 }

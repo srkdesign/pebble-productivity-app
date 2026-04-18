@@ -10,9 +10,11 @@
       "@components/*": ["./src/components/*"],
       "@utils/*": ["./src/utils/*"],
       "@api/*": ["./src/api/*"],
-      "@icons/*": ["./src/icons/*"],
+      "@icons": ["./src/icons/index"],
       "@config/*": ["./src/config/*"],
-      "@styles/*": ["./src/styles/*"]
+      "@styles/*": ["./src/styles/*"],
+      "@db/*": ["./src/db/*"],
+      "@consts/*": ["./src/consts/*"]
     },
 
     /* Bundler mode */
