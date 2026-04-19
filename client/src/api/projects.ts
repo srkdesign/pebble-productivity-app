@@ -98,7 +98,13 @@ async function markDirty(project: Project) {
 export const getProjects = async (): Promise<Project[]> => {
   if (!(await isServerOnline())) {
     const projects: Project[] = [];
-    await store.iterate<Project, void>((value) => projects.push(value));
+
+    await store.iterate<Project, void>((value) => {
+      projects.push(value);
+
+      return undefined;
+    });
+
     return projects;
   }
 

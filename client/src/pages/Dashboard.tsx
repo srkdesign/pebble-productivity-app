@@ -9,6 +9,11 @@ export default function Dashboard() {
   useEffect(() => {
     getProjects().then((p) => {
       setProjects(p);
+      console.log(
+        "projects loaded:",
+        p.length,
+        p.map((x) => x.name),
+      ); // ← add
       if (p.length) setActiveProject(p[0].id);
     });
   }, []);

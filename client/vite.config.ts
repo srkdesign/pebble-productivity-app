@@ -20,7 +20,13 @@ export default defineConfig({
       filename: "sw.js",
       scope: "/",
 
-      includeAssets: ["favicon.ico", "icon-192.png", "icon-512.png"],
+      includeAssets: [
+        "favicon.ico",
+        "icon-192.png",
+        "icon-512.png",
+        "logo/light.png",
+        "logo/dark.png",
+      ],
 
       manifest: {
         name: "Pebble Productivity App",
@@ -33,7 +39,7 @@ export default defineConfig({
         display_override: ["standalone", "minimal-ui"],
 
         background_color: "#ffffff",
-        theme_color: "#6366f1",
+        theme_color: "#ffffff",
 
         icons: [
           {
