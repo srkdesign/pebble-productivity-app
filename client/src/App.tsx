@@ -12,7 +12,7 @@ function App() {
     <div className="flex flex-col h-screen">
       <Toast.Provider />
       <Header />
-      <main className="flex-1 overflow-auto bg-zinc-100 dark:bg-zinc-950 overflow-y-scroll">
+      <main className="flex-1 overflow-auto bg-zinc-100 dark:bg-zinc-950">
         <Routes>
           <Route element={<Dashboard />} path="/" />
           <Route element={<Calendar />} path="/calendar" />

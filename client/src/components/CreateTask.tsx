@@ -214,19 +214,31 @@ export default function CreateTask({
               </Select.Trigger>
               <Select.Popover>
                 <ListBox>
-                  <ListBox.Item id="" textValue="No repeat">
+                  <ListBox.Item
+                    aria-label="No repeat"
+                    id=""
+                    textValue="No repeat"
+                  >
                     No repeat
                     <ListBox.ItemIndicator />
                   </ListBox.Item>
-                  <ListBox.Item id="daily" textValue="Daily">
+                  <ListBox.Item aria-label="Daily" id="daily" textValue="Daily">
                     Daily
                     <ListBox.ItemIndicator />
                   </ListBox.Item>
-                  <ListBox.Item id="weekly" textValue="Weekly">
+                  <ListBox.Item
+                    aria-label="Weekly"
+                    id="weekly"
+                    textValue="Weekly"
+                  >
                     Weekly
                     <ListBox.ItemIndicator />
                   </ListBox.Item>
-                  <ListBox.Item id="monthly" textValue="Monthly">
+                  <ListBox.Item
+                    aria-label="Monthly"
+                    id="monthly"
+                    textValue="Monthly"
+                  >
                     Monthly
                     <ListBox.ItemIndicator />
                   </ListBox.Item>
@@ -246,7 +258,10 @@ export default function CreateTask({
               >
                 <NumberField.Group>
                   <NumberField.DecrementButton />
-                  <NumberField.Input className="text-center" />
+                  <NumberField.Input
+                    aria-label="Repeat every"
+                    className="text-center"
+                  />
                   <NumberField.IncrementButton />
                 </NumberField.Group>
               </NumberField>
@@ -260,7 +275,7 @@ export default function CreateTask({
             variant="primary"
           >
             <Plus color="currentColor" size={32} />
-            <p className="block md:hidden">Add Task</p>
+            <p className="block md:hidden font-normal">Add Task</p>
           </Button>
         </div>
       </div>

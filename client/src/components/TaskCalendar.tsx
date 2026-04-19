@@ -70,7 +70,9 @@ export default function TaskCalendar({ tasks, projects }: TaskCalendarProps) {
           <Modal.Container placement="center">
             <Modal.Dialog>
               <Modal.Header>
-                <Modal.Heading>{clickedTask?.title}</Modal.Heading>
+                <Modal.Heading className="pr-8">
+                  {clickedTask?.title}
+                </Modal.Heading>
                 <Modal.CloseTrigger />
               </Modal.Header>
               <Modal.Footer className="flex justify-between">

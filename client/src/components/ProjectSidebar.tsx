@@ -231,7 +231,7 @@ export default function ProjectSidebar({
                     <Modal.Heading>New Project</Modal.Heading>
                     <Modal.CloseTrigger />
                   </Modal.Header>
-                  <Modal.Body className="flex flex-col gap-4 overflow-visible pt-4">
+                  <Modal.Body className="flex flex-col gap-2 overflow-visible pt-4">
                     <TextField
                       autoFocus
                       aria-label="Project name"
@@ -286,7 +286,7 @@ export default function ProjectSidebar({
                       </Disclosure.Content>
                     </Disclosure>
                   </Modal.Body>
-                  <Modal.Footer className="flex *:w-full">
+                  <Modal.Footer className="flex *:w-full md:*:w-auto">
                     <Button variant="tertiary" onPress={close}>
                       Cancel
                     </Button>
@@ -367,7 +367,7 @@ export default function ProjectSidebar({
                       </Disclosure.Content>
                     </Disclosure>
                   </Modal.Body>
-                  <Modal.Footer>
+                  <Modal.Footer className="flex *:w-full md:*:w-auto">
                     <Button variant="tertiary" onPress={close}>
                       Cancel
                     </Button>
@@ -396,7 +396,7 @@ export default function ProjectSidebar({
                     </Modal.Heading>
                     <Modal.CloseTrigger />
                   </Modal.Header>
-                  <Modal.Footer>
+                  <Modal.Footer className="flex *:w-full md:*:w-auto">
                     <Button variant="tertiary" onPress={close}>
                       Cancel
                     </Button>

@@ -47,21 +47,63 @@ jobs:
         run: npm run build
         working-directory: client
 
+      - name: Prepare icon folder
+        shell: bash
+        run: |
+          mkdir -p build-icons
+          cp client/public/icon-512.png build-icons/icon.png
+
+      - name: Generate icon (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          if [ ! -f client/public/icon.ico ]; then
+            magick client/public/icon.png -resize 256x256 client/public/icon.ico
+          fi
+
+      - name: Generate icon (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          if [ ! -f client/public/icon.icns ]; then
+            mkdir icon.iconset
+            sips -z 16 16     client/public/icon.png --out icon.iconset/icon_16x16.png
+            sips -z 32 32     client/public/icon.png --out icon.iconset/icon_16x16@2x.png
+            sips -z 32 32     client/public/icon.png --out icon.iconset/icon_32x32.png
+            sips -z 64 64     client/public/icon.png --out icon.iconset/icon_32x32@2x.png
+            sips -z 128 128   client/public/icon.png --out icon.iconset/icon_128x128.png
+            sips -z 256 256   client/public/icon.png --out icon.iconset/icon_128x128@2x.png
+            sips -z 256 256   client/public/icon.png --out icon.iconset/icon_256x256.png
+            sips -z 512 512   client/public/icon.png --out icon.iconset/icon_256x256@2x.png
+            sips -z 512 512   client/public/icon.png --out icon.iconset/icon_512x512.png
+            iconutil -c icns icon.iconset -o client/public/icon.icns
+          fi
+
       - name: Build executable (Mac/Linux)
         if: runner.os != 'Windows'
-        run: uv run pyinstaller --onefile --add-data "server/static:static" server/main.py --name pebbleproductivityapp
+        run: |
+          # pick icns on mac, png on linux
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            ICON="build-icons/icon.icns"
+          else
+            ICON="build-icons/icon.png"
+          fi
+          uv run pyinstaller --onefile \
+            --add-data "server/static:static" \
+            --icon "$ICON" \
+            --name "pebble" \
+            server/main.py
 
       - name: Build executable (Windows)
         if: runner.os == 'Windows'
-        run: uv run pyinstaller --onefile --add-data "server/static;static" server/main.py --name pebbleproductivityapp
+        run: uv run pyinstaller --onefile --add-data "server/static;static"  --icon "build-icons/icon.ico" --name pebble server/main.py
 
       - name: Prepare artifacts per OS
         run: |
           mkdir upload
           if [ "$RUNNER_OS" = "Windows" ]; then
-            cp dist/*.exe upload/app-$RUNNER_OS.exe
+            cp dist/*.exe upload/pebble-$RUNNER_OS.exe
           else
-            cp dist/* upload/app-$RUNNER_OS
+            cp dist/* upload/pebble-$RUNNER_OS
           fi
         shell: bash
 

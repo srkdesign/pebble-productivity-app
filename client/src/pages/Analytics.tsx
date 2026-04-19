@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getTasks } from "@api/tasks";
 import { getProjects } from "@api/projects";
-import { Card } from "@heroui/react";
+import { Card, Skeleton } from "@heroui/react";
 import {
   ProjectPieChart,
   CompletionRate,
@@ -33,13 +33,19 @@ export default function Analytics() {
 
   if (loading)
     return (
-      <div className="w-full h-full flex items-center justify-center">
-        Loading analytics...
+      <div className="md:flex h-full">
+        <div className="flex flex-col md:grid grid-cols-4 md:gap-4 gap-2 grid-rows-3 w-full md:p-6 p-2 md:h-full">
+          {" "}
+          <Skeleton className="p-4 col-span-2 row-span-3 shadow-none rounded-3xl" />
+          <Skeleton className="p-4 md:col-span-1 row-span-2 shadow-none rounded-3xl" />
+          <Skeleton className="p-4 col-span-1 row-span-2 shadow-none rounded-3xl" />
+          <Skeleton className="p-4 col-span-2 row-span-1 shadow-none rounded-3xl" />
+        </div>
       </div>
     );
 
   return (
-    <div className="md:flex h-full">
+    <div className="md:flex h-full overflow-y-scroll">
       <div className="flex flex-col md:grid grid-cols-4 md:gap-4 gap-2 grid-rows-3 w-full md:p-6 p-2 md:h-full">
         {" "}
         <Card className="p-4 col-span-2 row-span-3 shadow-none">

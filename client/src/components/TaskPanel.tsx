@@ -139,13 +139,13 @@ export default function TaskPanel({ projects, projectId }: TaskPanelProps) {
               {({ close }) => (
                 <>
                   <Modal.Header>
-                    <Modal.Heading>
+                    <Modal.Heading className="pr-8">
                       Are you sure you want to delete all tasks from all
                       projects?
                     </Modal.Heading>
                     <Modal.CloseTrigger />
                   </Modal.Header>
-                  <Modal.Footer>
+                  <Modal.Footer className="flex *:w-full md:*:w-auto">
                     <Button variant="tertiary" onPress={close}>
                       Cancel
                     </Button>

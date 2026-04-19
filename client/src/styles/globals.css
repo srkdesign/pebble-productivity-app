@@ -11,7 +11,7 @@
 :root {
   --button-fg: none !important;
   --color-accent-soft-foreground: none !important;
-  @apply font-medium;
+  @apply font-medium text-zinc-950 dark:text-zinc-50;
 }
 
 @layer components {
@@ -28,12 +28,11 @@
 
 @font-face {
   font-family: Manrope;
-  src: url("/fonts/Manrope.ttf");
+  src: url("/fonts/Manrope.woff2");
 }
 
 @theme {
   --font-display: AveriaLibre, sans-serif;
-  --font-serif: Cactus, serif;
   --font-sans: Manrope, sans-serif;
 }
 

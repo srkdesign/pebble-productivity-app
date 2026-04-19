@@ -25,7 +25,7 @@ export default function CalendarPage() {
   }, []);
 
   return (
-    <div className="md:flex w-full p-2 md:p-6">
+    <div className="md:flex w-full p-2 md:p-6 overflow-y-scroll">
       <Card className="h-[calc(100dvh-7rem)] p-0 w-full shadow-none">
         <Card.Content>
           <TaskCalendar projects={projects} tasks={tasks} />

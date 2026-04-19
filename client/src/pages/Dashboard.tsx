@@ -35,7 +35,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex md:flex-row flex-col md:gap-6 gap-2 min-h-screen  md:p-6 p-2">
+    <div className="flex md:flex-row flex-col md:gap-6 gap-2 min-h-screen md:p-6 p-2">
       <ProjectSidebar
         active={activeProject}
         projects={projects}
@@ -47,7 +47,6 @@ export default function Dashboard() {
         onSelect={setActiveProject}
         onUpdate={handleUpdate}
       />
-
       <TaskPanel projectId={activeProject} projects={projects} />
     </div>
   );

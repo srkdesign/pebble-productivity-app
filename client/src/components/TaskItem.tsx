@@ -373,11 +373,11 @@ export default function TaskItem({
                 <Modal.Dialog>
                   {({ close }) => (
                     <>
-                      <Modal.Header>
+                      <Modal.Header className="pr-8">
                         <Modal.Heading>Edit Task</Modal.Heading>
                         <Modal.CloseTrigger />
                       </Modal.Header>
-                      <Modal.Body className="flex flex-col gap-4 overflow-visible pt-4">
+                      <Modal.Body className="flex flex-col gap-2 overflow-visible pt-4">
                         <TextField
                           autoFocus
                           aria-label="Project name"
@@ -461,7 +461,7 @@ export default function TaskItem({
                           </DatePicker>
                         )}
                       </Modal.Body>
-                      <Modal.Footer>
+                      <Modal.Footer className="flex *:w-full md:*:w-auto">
                         <Button variant="secondary" onPress={close}>
                           Cancel
                         </Button>
@@ -487,12 +487,12 @@ export default function TaskItem({
                   {({ close }) => (
                     <>
                       <Modal.Header>
-                        <Modal.Heading className="mr-6">
+                        <Modal.Heading className="pr-8">
                           Are you sure you want to delete &quot;{title}&quot;?
                         </Modal.Heading>
                         <Modal.CloseTrigger />
                       </Modal.Header>
-                      <Modal.Footer>
+                      <Modal.Footer className="flex *:w-full md:*:w-auto">
                         <Button variant="secondary" onPress={close}>
                           Cancel
                         </Button>

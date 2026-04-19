@@ -55,9 +55,15 @@ def service_worker():
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
 def serve(path):
-    file_path = os.path.join(STATIC_DIR, path)
-    if path and os.path.isfile(file_path):
-        return send_from_directory(STATIC_DIR, path)
+    asset_extensions = (
+        ".js", ".css", ".png", ".ico", ".svg", ".woff", ".woff2", ".webmanifest", ".json"
+    )
+
+    if any(path.endswith(ext) for ext in asset_extensions):
+        file_path = os.path.join(STATIC_DIR, path)
+        if path and os.path.isfile(file_path):
+            return send_from_directory(STATIC_DIR, path)
+        return "", 404
     
     # Serve React index.html
     response = send_from_directory(STATIC_DIR, "index.html")
