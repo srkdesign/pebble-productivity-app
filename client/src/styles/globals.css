@@ -120,7 +120,7 @@
 
 /* Remove default rect stroke */
 .react-calendar-heatmap rect {
-  rx: 2px;
+  rx: 100px;
 }
 
 /* Text color for month/day labels */

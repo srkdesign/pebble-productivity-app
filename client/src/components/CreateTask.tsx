@@ -275,7 +275,7 @@ export default function CreateTask({
             variant="primary"
           >
             <Plus color="currentColor" size={32} />
-            <p className="block md:hidden font-normal">Add Task</p>
+            <p className="block md:hidden font-medium">Add Task</p>
           </Button>
         </div>
       </div>

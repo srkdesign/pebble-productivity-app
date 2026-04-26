@@ -43,7 +43,7 @@ export default function CompletionRate({
             <Card.Content className="p-4">
               <p className="text-sm text-neutral-500">{s.label}</p>
               <p
-                className={`text-3xl font-bold ${s.danger && s.value > 0 ? "text-danger" : ""}`}
+                className={`text-3xl font-bold tracking-tight ${s.danger && s.value > 0 ? "text-danger" : ""}`}
               >
                 {s.value}
               </p>

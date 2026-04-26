@@ -112,8 +112,10 @@ export default function TaskItem({
 
       intervalRef.current = setInterval(() => {
         const base = initialTask.time_spent ?? 0;
+        const spent = Math.floor((Date.now() - startTime) / 1000);
+        const total = Math.abs(base + spent);
 
-        setTimeSpent(base + Math.floor((Date.now() - startTime) / 1000));
+        setTimeSpent(total);
       }, 1000);
     }
 
@@ -334,7 +336,7 @@ export default function TaskItem({
 
             {/* Action buttons — hover on desktop, tap-to-reveal on mobile */}
             <div
-              className={`md:flex gap-2 ${isActive ? "absolute right-0 top-1/2 -translate-y-1/2 bg-linear-to-r from-transparent via-white to-white dark:via-zinc-900 dark:to-zinc-900 p-36 pr-4" : ""}`}
+              className={`md:flex gap-2 absolute right-0 top-1/2 -translate-y-1/2 pr-4 ${isActive ? " bg-linear-to-r from-transparent via-white to-white dark:via-zinc-900 dark:to-zinc-900 p-36" : ""}`}
             >
               <ButtonGroup
                 className={`[&_button]:rounded-full gap-2 transition-opacity

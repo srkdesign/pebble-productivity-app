@@ -20,13 +20,7 @@ export default defineConfig({
       filename: "sw.js",
       scope: "/",
 
-      includeAssets: [
-        "favicon.ico",
-        "icon-192.png",
-        "icon-512.png",
-        "logo/light.png",
-        "logo/dark.png",
-      ],
+      includeAssets: ["favicon.ico", "icon-192.png", "icon-512.png"],
 
       manifest: {
         name: "Pebble Productivity App",
@@ -70,9 +64,15 @@ export default defineConfig({
       },
 
       workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2,webmanifest}"],
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2,mp3,webmanifest}"],
 
-        additionalManifestEntries: [{ url: "index.html", revision: null }],
+        additionalManifestEntries: [
+          { url: "/logo/light.png", revision: null },
+          { url: "/logo/dark.png", revision: null },
+          { url: "/fonts/AveriaLibre-Bold.woff2", revision: null },
+          { url: "/fonts/Manrope.woff2", revision: null },
+          { url: "index.html", revision: null },
+        ],
 
         navigateFallback: "index.html",
         navigateFallbackDenylist: [/^\/api/],
