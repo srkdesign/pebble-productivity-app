@@ -1,6 +1,17 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+const cache: Record<string, HTMLAudioElement> = {};
+
+const getAudio = (src: string) => {
+  if (!cache[src]) {
+    cache[src] = new Audio(src);
+    cache[src].load();
+  }
+
+  return cache[src];
+};
+
 interface SoundStore {
   muted: boolean;
   toggleMute: () => void;
@@ -14,7 +25,9 @@ export const useSoundStore = create<SoundStore>()(
       toggleMute: () => set((s) => ({ muted: !s.muted })),
       play: (src) => {
         if (get().muted) return;
-        new Audio(src).play().catch(() => {});
+        const audio = getAudio(src);
+        audio.currentTime = 0;
+        audio.play().catch(() => {});
       },
     }),
     { name: "sound-settings" },

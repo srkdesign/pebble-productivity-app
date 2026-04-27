@@ -56,7 +56,7 @@ def service_worker():
 @app.route("/<path:path>")
 def serve(path):
     asset_extensions = (
-        ".js", ".css", ".png", ".ico", ".svg", ".woff", ".woff2", ".webmanifest", ".json"
+        ".js", ".css", ".png", ".ico", ".svg", ".woff", ".woff2", ".mp3", ".webmanifest", ".json"
     )
 
     if any(path.endswith(ext) for ext in asset_extensions):

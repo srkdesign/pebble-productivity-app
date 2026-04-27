@@ -71,6 +71,7 @@ export default defineConfig({
           { url: "/logo/dark.png", revision: null },
           { url: "/fonts/AveriaLibre-Bold.woff2", revision: null },
           { url: "/fonts/Manrope.woff2", revision: null },
+          { url: "/sounds/completed.mp3", revision: null },
           { url: "index.html", revision: null },
         ],
 

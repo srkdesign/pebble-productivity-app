@@ -112,10 +112,8 @@ export default function TaskItem({
 
       intervalRef.current = setInterval(() => {
         const base = initialTask.time_spent ?? 0;
-        const spent = Math.floor((Date.now() - startTime) / 1000);
-        const total = Math.abs(base + spent);
 
-        setTimeSpent(total);
+        setTimeSpent(base + Math.floor((Date.now() - startTime) / 1000));
       }, 1000);
     }
 
@@ -142,11 +140,11 @@ export default function TaskItem({
   };
 
   const handleToggleComplete = async () => {
+    play("/sounds/completed.mp3");
     const updated = await toggleComplete(task.id);
 
     setTask(updated);
     onUpdate();
-    play("sounds/completed.mp3");
   };
 
   const handleToggleTimer = async () => {
