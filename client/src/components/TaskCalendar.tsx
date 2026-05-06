@@ -14,6 +14,7 @@ interface Task {
   title: string;
   due_date?: number; // Unix timestamp in seconds
   project_id?: number;
+  completed: boolean;
 }
 
 interface TaskCalendarProps {
@@ -42,6 +43,7 @@ export default function TaskCalendar({ tasks, projects }: TaskCalendarProps) {
         borderColor: color,
         textColor: "#fff",
         extendedProps: { projectId: t.project_id },
+        classNames: t.completed ? ["event-completed"] : [],
       };
     });
 
@@ -75,8 +77,8 @@ export default function TaskCalendar({ tasks, projects }: TaskCalendarProps) {
                 </Modal.Heading>
                 <Modal.CloseTrigger />
               </Modal.Header>
-              <Modal.Footer className="flex justify-between">
-                <div className="flex gap-2">
+              <Modal.Footer className="flex justify-between flex-wrap items-end">
+                <div className="flex gap-2 flex-wrap">
                   <Button variant="tertiary">
                     <Folder color="currentColor" size={16} />
                     {projects.find((p) => p.id === clickedTask?.project_id)

@@ -49,6 +49,14 @@
   }
 }
 
+.toast {
+  @apply flex items-center mb-2;
+}
+
+.event-completed {
+  @apply opacity-50;
+}
+
 .fc .fc-toolbar-title {
   @apply font-bold tracking-tight;
 }

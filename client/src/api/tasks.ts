@@ -10,6 +10,10 @@ import { Task } from "@/types";
 const API = axios.create({ baseURL: `/api` });
 const store = localforage.createInstance({ name: "tasks" });
 
+function notifyTasksUpdated() {
+  window.dispatchEvent(new CustomEvent("tasks-updated"));
+}
+
 if (navigator.storage?.persist) {
   navigator.storage.persist();
 }
@@ -132,9 +136,13 @@ export const toggleComplete = async (id: number): Promise<Task> => {
     const cached = await store.getItem<Task>(String(id));
     const updated = { ...cached!, completed: !cached?.completed, _dirty: true };
 
+    notifyTasksUpdated();
+
     return markDirty(updated);
   }
   const res = await API.put(`/tasks/${id}/complete`);
+
+  notifyTasksUpdated();
 
   return cacheTask(res.data);
 };
@@ -148,6 +156,8 @@ export const startTimer = async (id: number): Promise<Task> => {
   if (!(await isServerOnline())) {
     const cached = await store.getItem<Task>(String(id));
 
+    notifyTasksUpdated();
+
     return markDirty({
       ...cached!,
       is_running: true,
@@ -155,6 +165,8 @@ export const startTimer = async (id: number): Promise<Task> => {
     });
   }
   const res = await API.post(`/tasks/${id}/start`);
+
+  notifyTasksUpdated();
 
   return cacheTask(res.data);
 };
@@ -166,6 +178,8 @@ export const stopTimer = async (id: number): Promise<Task> => {
     const elapsed =
       (cached?.time_spent ?? 0) + (now - (cached?.last_start ?? now));
 
+    notifyTasksUpdated();
+
     return markDirty({
       ...cached!,
       is_running: false,
@@ -174,6 +188,8 @@ export const stopTimer = async (id: number): Promise<Task> => {
     });
   }
   const res = await API.post(`/tasks/${id}/stop`);
+
+  notifyTasksUpdated();
 
   return cacheTask(res.data);
 };
@@ -185,14 +201,19 @@ export const updateTask = async (
     completed: boolean;
     project_id: number;
     due_date: number;
+    time_spent: number;
   }>,
 ): Promise<Task> => {
   if (!(await isServerOnline())) {
     const cached = await store.getItem<Task>(String(id));
 
+    notifyTasksUpdated();
+
     return markDirty({ ...cached!, ...data });
   }
   const res = await API.patch(`/tasks/${id}`, data);
+
+  notifyTasksUpdated();
 
   return cacheTask(res.data);
 };

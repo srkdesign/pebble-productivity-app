@@ -1,12 +1,6 @@
 /* eslint-disable jsx-a11y/no-autofocus */
 import { useState, useEffect, useRef } from "react";
-import {
-  toggleComplete,
-  deleteTask,
-  startTimer,
-  stopTimer,
-  updateTask,
-} from "@api/tasks";
+import { toggleComplete, deleteTask, updateTask } from "@api/tasks";
 import { parseDate, CalendarDate } from "@internationalized/date";
 import formatRecurring from "@utils/recurring";
 import {
@@ -24,6 +18,7 @@ import {
   Input,
   useOverlayState,
 } from "@heroui/react";
+import { IMask, IMaskInput } from "react-imask";
 import {
   TrashBin,
   PlayButton,
@@ -38,6 +33,7 @@ import {
 import { Task, Project } from "@/types";
 import { useSoundStore } from "@/stores/soundStore";
 import { formatDate } from "@/utils/date";
+import { useTimerStore } from "@/stores/timerStore";
 
 interface TaskItemProps {
   task: Task;
@@ -67,6 +63,8 @@ export default function TaskItem({
       : "",
   );
   const [editingDue, setEditingDue] = useState(false);
+
+  const { toggleTimer, setOnUpdate } = useTimerStore();
 
   const [timeSpent, setTimeSpent] = useState(initialTask.time_spent ?? 0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -147,13 +145,18 @@ export default function TaskItem({
     onUpdate();
   };
 
+  // Keep the store's ref pointing to the current page's onUpdate
+  useEffect(() => {
+    setOnUpdate(onUpdate);
+  }, [onUpdate]);
+
   const handleToggleTimer = async () => {
+    await toggleTimer(task.id, task.title, task.is_running);
     const updated = task.is_running
-      ? await stopTimer(task.id)
-      : await startTimer(task.id);
+      ? { ...task, is_running: false }
+      : { ...task, is_running: true };
 
     setTask(updated);
-    onUpdate();
   };
 
   const handleDelete = async () => {
@@ -194,6 +197,50 @@ export default function TaskItem({
       onUpdate();
     }
     setEditingDue(false);
+  };
+
+  const [editingTime, setEditingTime] = useState(false);
+  const [timeInput, setTimeInput] = useState("");
+
+  // const parseTimeInput = (value: string): number | null => {
+  //   // Accept formats: "1:30:00", "1:30", "90" (minutes), "5400" (seconds)
+  //   const parts = value.split(":").map(Number);
+
+  //   if (parts.some(isNaN)) return null;
+
+  //   if (parts.length === 3) {
+  //     // hh:mm:ss
+  //     return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  //   } else if (parts.length === 2) {
+  //     // mm:ss
+  //     return parts[0] * 60 + parts[1];
+  //   } else if (parts.length === 1) {
+  //     // raw minutes
+  //     return parts[0] * 60;
+  //   }
+
+  //   return null;
+  // };
+
+  const handleTimeClick = () => {
+    if (task.is_running) return;
+    setTimeInput(formatTime(timeSpent)); // pre-fill with current value
+    setEditingTime(true);
+  };
+
+  const handleSaveTime = async () => {
+    const [h, m, s] = timeInput.split(":").map(Number);
+    const seconds = h * 3600 + m * 60 + s;
+
+    if (!isNaN(seconds) && seconds !== timeSpent) {
+      const updated = await updateTask(task.id, { time_spent: seconds }); // writes to localforage
+
+      setTask(updated);
+      setTimeSpent(seconds);
+      window.dispatchEvent(new CustomEvent("tasks-updated"));
+    }
+
+    setEditingTime(false);
   };
 
   const handleSave = async (close?: () => void) => {
@@ -313,7 +360,51 @@ export default function TaskItem({
                 {/* Time spent */}
                 <span className="flex gap-1 items-center">
                   <TimerIcon color="currentColor" size={19} />
-                  {formatTime(timeSpent)}
+                  {editingTime ? (
+                    <IMaskInput
+                      autoFocus
+                      overwrite // typing replaces rather than inserts
+                      blocks={{
+                        HH: {
+                          mask: IMask.MaskedRange,
+                          from: 0,
+                          to: 99,
+                          maxLength: 2,
+                        },
+                        MM: {
+                          mask: IMask.MaskedRange,
+                          from: 0,
+                          to: 59,
+                          maxLength: 2,
+                        },
+                        SS: {
+                          mask: IMask.MaskedRange,
+                          from: 0,
+                          to: 59,
+                          maxLength: 2,
+                        },
+                      }}
+                      className="w-24 bg-transparent outline-none text-sm"
+                      lazy={false} // always show the placeholder slots
+                      mask="HH:MM:SS"
+                      value={timeInput}
+                      onAccept={(value: string) => setTimeInput(value)}
+                      onBlur={handleSaveTime}
+                      onKeyDown={(e: React.KeyboardEvent) => {
+                        if (e.key === "Enter") handleSaveTime();
+                        if (e.key === "Escape") setEditingTime(false);
+                      }}
+                    />
+                  ) : (
+                    <span
+                      className={
+                        !task.is_running ? "cursor-pointer" : "cursor-default"
+                      }
+                      onDoubleClick={handleTimeClick}
+                    >
+                      {formatTime(timeSpent)}
+                    </span>
+                  )}
                 </span>
 
                 {/* Recurring label */}
