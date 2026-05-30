@@ -156,13 +156,25 @@ export const startTimer = async (id: number): Promise<Task> => {
   if (!(await isServerOnline())) {
     const cached = await store.getItem<Task>(String(id));
 
-    notifyTasksUpdated();
+    // If somehow already running, stop accumulating from the old start before
+    // restarting — prevents double-counting if start is called twice
+    const now = Math.floor(Date.now() / 1000);
+    const base =
+      cached?.is_running && cached?.last_start != null
+        ? (cached.time_spent ?? 0) + (now - cached.last_start)
+        : (cached?.time_spent ?? 0);
 
-    return markDirty({
+    const updated: Task = {
       ...cached!,
       is_running: true,
-      last_start: Math.floor(Date.now() / 1000),
-    });
+      last_start: now,
+      time_spent: base,
+    };
+
+    await markDirty(updated);
+    notifyTasksUpdated();
+
+    return updated;
   }
   const res = await API.post(`/tasks/${id}/start`);
 
@@ -175,17 +187,24 @@ export const stopTimer = async (id: number): Promise<Task> => {
   if (!(await isServerOnline())) {
     const cached = await store.getItem<Task>(String(id));
     const now = Math.floor(Date.now() / 1000);
+
+    // Guard: if last_start is missing, don't add anything — avoids wiping progress
     const elapsed =
-      (cached?.time_spent ?? 0) + (now - (cached?.last_start ?? now));
+      cached?.last_start != null
+        ? (cached.time_spent ?? 0) + (now - cached.last_start)
+        : (cached?.time_spent ?? 0);
 
-    notifyTasksUpdated();
-
-    return markDirty({
+    const updated: Task = {
       ...cached!,
       is_running: false,
       last_start: undefined,
       time_spent: elapsed,
-    });
+    };
+
+    await markDirty(updated);
+    notifyTasksUpdated();
+
+    return updated;
   }
   const res = await API.post(`/tasks/${id}/stop`);
 

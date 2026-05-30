@@ -90,6 +90,8 @@ export default function TaskItem({
     };
   }, [isActive]);
 
+  const timeSpentRef = useRef(initialTask.time_spent ?? 0);
+
   useEffect(() => {
     setTask(initialTask);
     setTitle(initialTask.title);
@@ -99,7 +101,12 @@ export default function TaskItem({
         ? new Date(initialTask.due_date * 1000).toISOString().substring(0, 10)
         : "",
     );
-    setTimeSpent(initialTask.time_spent ?? 0);
+
+    // Only sync timeSpent from server if the timer isn't actively running locally
+    if (!initialTask.is_running) {
+      setTimeSpent(initialTask.time_spent ?? 0);
+      timeSpentRef.current = initialTask.time_spent ?? 0;
+    }
 
     if (intervalRef.current) clearInterval(intervalRef.current);
 
@@ -108,10 +115,13 @@ export default function TaskItem({
         ? initialTask.last_start * 1000
         : Date.now();
 
-      intervalRef.current = setInterval(() => {
-        const base = initialTask.time_spent ?? 0;
+      // Seed the ref so the interval always reads a fresh base
+      timeSpentRef.current = initialTask.time_spent ?? 0;
 
-        setTimeSpent(base + Math.floor((Date.now() - startTime) / 1000));
+      intervalRef.current = setInterval(() => {
+        setTimeSpent(
+          timeSpentRef.current + Math.floor((Date.now() - startTime) / 1000),
+        );
       }, 1000);
     }
 
@@ -152,11 +162,12 @@ export default function TaskItem({
 
   const handleToggleTimer = async () => {
     await toggleTimer(task.id, task.title, task.is_running);
-    const updated = task.is_running
-      ? { ...task, is_running: false }
-      : { ...task, is_running: true };
+    onUpdate();
+    // const updated = task.is_running
+    //   ? { ...task, is_running: false }
+    //   : { ...task, is_running: true };
 
-    setTask(updated);
+    // setTask(updated);
   };
 
   const handleDelete = async () => {
