@@ -11,8 +11,9 @@
   },
   "dependencies": {
     "@fullcalendar/daygrid": "^6.1.20",
-    "@fullcalendar/interaction": "^6.1.20",
+    "@fullcalendar/interaction": "^6.1.21",
     "@fullcalendar/react": "^6.1.20",
+    "@fullcalendar/timegrid": "^6.1.21",
     "@heroui/button": "2.2.31",
     "@heroui/code": "2.2.24",
     "@heroui/dropdown": "2.3.31",

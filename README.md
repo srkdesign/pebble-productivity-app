@@ -1,4 +1,4 @@
 ## Commands
 
-python -m server.app
+python -m server.main
 npm run dev

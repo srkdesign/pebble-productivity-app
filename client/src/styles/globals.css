@@ -93,6 +93,10 @@
   @apply border border-zinc-100 dark:border-zinc-700/50;
 }
 
+.fc .fc-timegrid-slot-minor {
+  @apply border-t border-t-zinc-100 dark:border-zinc-700/50;
+}
+
 .fc .fc-daygrid-day-top {
   @apply flex-row md:p-2;
 }

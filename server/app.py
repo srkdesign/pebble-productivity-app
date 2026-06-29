@@ -1,267 +1,288 @@
+from datetime import datetime
 import os
-import socket
+import sys
+import time
+
 from flask import Flask, jsonify, request, send_from_directory
+from flask_cors import CORS
+from sqlalchemy.orm import joinedload
+
 from server.db.session import SessionLocal, engine
 from server.models.base import Base
-from server.services.project_service import ensure_default_project, create_project
-from server.services.task_service import create_task
-from server.services.sync_service import *
-from server.services.serializers import serialize_project, serialize_task
-from flask_cors import CORS
-from server.services.task_service import start_timer, stop_timer
-from server.services.recurring_service import create_recurring_rule, generate_recurring_tasks
+from server.models.task import Task
+from server.models.project import Project
 from server.models.recurring_task import RecurringTask
 
-# print("FLASK APP IS RUNNING")
+from server.services.project_service import ensure_default_project, create_project
+from server.services.task_service import create_task, start_timer, stop_timer, get_smart_view_tasks
+from server.services.recurring_service import (
+    create_recurring_rule,
+    generate_recurring_tasks,
+)
+from server.services.serializers import serialize_task, serialize_project
 
-import sys, os
 
-def get_base_dir():
-    if getattr(sys, 'frozen', False):
-        # Running as PyInstaller bundle
-        # sys._MEIPASS is where bundled files are extracted
-        return sys._MEIPASS
-    # Running as plain Python
-    return os.path.dirname(os.path.abspath(__file__))
-
-BASE_DIR = get_base_dir()   # /server
-STATIC_DIR = os.path.join(BASE_DIR, "static")  # server/static
+# ----------------------------
+# App setup
+# ----------------------------
 
 app = Flask(__name__, static_folder=None)
 CORS(app)
-
 app.url_map.strict_slashes = False
 
-# create tables + default project
-Base.metadata.create_all(engine)
-session = SessionLocal()
-ensure_default_project(session)
-session.close()
 
-# app.py - add ABOVE the existing serve() route
+def get_base_dir():
+    if getattr(sys, "frozen", False):
+        return sys._MEIPASS
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+BASE_DIR = get_base_dir()
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+
+
+# ----------------------------
+# DB init
+# ----------------------------
+
+Base.metadata.create_all(engine)
+
+with SessionLocal() as session:
+    ensure_default_project(session)
+
+
+# ----------------------------
+# Global performance state
+# ----------------------------
+
+_last_generation = 0
+RECURRENCE_INTERVAL = 300
+
+
+# ----------------------------
+# Static
+# ----------------------------
 
 @app.route("/sw.js")
 def service_worker():
-    response = send_from_directory(
-        STATIC_DIR,
-        "sw.js",
-        mimetype="application/javascript"
-    )
-    # allow full scope
-    response.headers["Service-Worker-Allowed"] = "/"
+    return send_from_directory(STATIC_DIR, "sw.js")
 
-    return response
 
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
 def serve(path):
-    asset_extensions = (
-        ".js", ".css", ".png", ".ico", ".svg", ".woff", ".woff2", ".mp3", ".webmanifest", ".json"
-    )
+    file_path = os.path.join(STATIC_DIR, path)
 
-    if any(path.endswith(ext) for ext in asset_extensions):
-        file_path = os.path.join(STATIC_DIR, path)
-        if path and os.path.isfile(file_path):
-            return send_from_directory(STATIC_DIR, path)
-        return "", 404
-    
-    # Serve React index.html
-    response = send_from_directory(STATIC_DIR, "index.html")
-    response.headers["Cache-Control"] = "public, max-age=31536000"
-    return response
+    if path and os.path.exists(file_path):
+        return send_from_directory(STATIC_DIR, path)
+
+    return send_from_directory(STATIC_DIR, "index.html")
+
+
+# ----------------------------
+# PROJECTS
+# ----------------------------
 
 @app.route("/api/projects", methods=["GET"])
 def get_projects():
-    session = SessionLocal()
-    projects = session.query(Project).all()
-    serialized = [serialize_project(p) for p in projects]
-    session.close()
-    return jsonify(serialized)
+    with SessionLocal() as session:
+        projects = session.query(Project).all()
+        return jsonify([serialize_project(p) for p in projects])
+
 
 @app.route("/api/projects", methods=["POST"])
 def create_project_route():
-    session = SessionLocal()
-    name = request.json["name"]
-    color = request.json.get("color", "#6366f1")
-    
-    # ✅ check if project already exists (duplicate sync attempt)
-    existing = session.query(Project).filter(Project.name == name).first()
-    if existing:
-        data = serialize_project(existing)
-        session.close()
-        return jsonify(data)  # return existing project instead of erroring
-    
-    project = create_project(session, name, color)
-    data = serialize_project(project)
-    session.close()
-    return jsonify(data)
+    with SessionLocal() as session:
+        data = request.get_json()
 
-@app.route("/api/projects/<int:project_id>", methods=["PATCH"])
-def update_project_route(project_id):
-    session = SessionLocal()
-    project = session.query(Project).filter(Project.id == project_id).first()
-    if not project:
-        return jsonify({"error": "Not found"}), 404
-    data = request.json
-    if "name" in data:
-        project.name = data["name"]
-    if "color" in data:
-        project.color = data["color"]
-    project.updated_at = int(time.time())
-    session.commit()
-    session.refresh(project)
-    result = serialize_project(project)
-    session.close()
-    return jsonify(result)
+        existing = session.query(Project).filter_by(name=data["name"]).first()
+        if existing:
+            return jsonify(serialize_project(existing))
 
-@app.route("/api/projects/<int:project_id>", methods=["DELETE"])
-def delete_project_route(project_id):
-    session = SessionLocal()
-    project = session.query(Project).filter(Project.id == project_id).first()
-    if not project:
-        return jsonify({"error": "Not found"}), 404
-    session.delete(project)
-    session.commit()
-    session.close()
-    return jsonify({"success": True})
+        project = create_project(
+            session,
+            data["name"],
+            data.get("color", "#6366f1"),
+        )
+
+        return jsonify(serialize_project(project))
+
+
+# ----------------------------
+# TASKS (FAST CORE)
+# ----------------------------
 
 @app.route("/api/tasks", methods=["GET"])
 def get_tasks():
-    session = SessionLocal()
-    try:
-        # Only generate recurring tasks if rules exist
-        rules_exist = session.query(RecurringTask).first() is not None
-        if rules_exist:
-            generate_recurring_tasks(session, lookahead_days=90)
+    global _last_generation
 
-        tasks = session.query(Task).all()
-        serialized = [serialize_task(t) for t in tasks]  # includes recurring_rule
-        return jsonify(serialized)
-    finally:
-        session.close()
+    with SessionLocal() as session:
+
+        now = time.time()
+
+        # throttled recurring generation
+        if now - _last_generation > RECURRENCE_INTERVAL:
+            if session.query(RecurringTask.id).first():
+                generate_recurring_tasks(session, lookahead_days=90)
+            _last_generation = now
+
+        page = request.args.get("page", 1, type=int)
+        limit = min(request.args.get("limit", 50, type=int), 100)
+        offset = (page - 1) * limit
+
+        tasks = (
+            session.query(Task)
+            .options(joinedload(Task.recurring_rule))
+            .order_by(Task.id.desc())
+            .limit(limit)
+            .offset(offset)
+            .all()
+        )
+
+        return jsonify({
+            "page": page,
+            "limit": limit,
+            "data": [serialize_task(t) for t in tasks],
+        })
+
 
 @app.route("/api/tasks", methods=["POST"])
 def new_task():
-    session = SessionLocal()
-    data = request.json
-    due_date = data.get("due_date")
+    with SessionLocal() as session:
+        data = request.get_json()
+        due_date = data.get("due_date")
 
-    # Create normal task
-    task = create_task(
-        session,
-        title=data["title"],
-        project_id=data.get("project_id"),
-        due_date=due_date
-    )
+        task = create_task(
+            session,
+            title=data["title"],
+            project_id=data.get("project_id"),
+            due_date=due_date,
+        )
 
-    # If recurring rule info is present, create the rule
-    if "recurring_rule" in data:
-        rule_data = data["recurring_rule"]
-        rule_data["project_id"] = data.get("project_id")
-        rule_data["title"] = data["title"]
-        # make sure start_date exists
-        if not rule_data.get("start_date"):
-            rule_data["start_date"] = due_date or int(time.time())
+        if "recurring_rule" in data:
+            rule = data["recurring_rule"].copy()
+            rule["project_id"] = data.get("project_id")
+            rule["title"] = data["title"]
+            rule["start_date"] = rule.get("start_date") or due_date or int(time.time())
 
-        rule = create_recurring_rule(session, rule_data)
-        task.recurring_rule_id = rule.id
-        session.commit()
+            created = create_recurring_rule(session, rule)
+            task.recurring_rule_id = created.id
+            session.commit()
 
-    task_data = serialize_task(task)
-    session.close()
-    return jsonify(task_data)
+        return jsonify(serialize_task(task))
 
-@app.route("/api/tasks/<int:task_id>/complete", methods=["PUT"])
-def complete_task(task_id):
-    session = SessionLocal()
-    task = session.get(Task, task_id)
-    task.completed = not task.completed
-    task.updated_at = int(time.time())
-
-    if task.completed:
-        task.completed_at = int(time.time())
-    else:
-        task.completed_at = None
-
-    session.commit()
-    data = serialize_task(task)
-    session.close()
-    return jsonify(data)
-
-@app.route("/api/tasks/<int:task_id>/delete", methods=["DELETE"])
-def delete_task(task_id):
-    session = SessionLocal()
-    task = session.get(Task, task_id)
-    if not task:
-        session.close()
-        return jsonify({"error": "Task not found"}), 404
-    session.delete(task)
-    session.commit()
-    session.close()
-    return jsonify({"status": "deleted"})
-
-@app.route("/api/tasks/<int:task_id>/start", methods=["POST"])
-def start_task_timer(task_id):
-    session = SessionLocal()
-    start_timer(session, task_id)
-    task = session.get(Task, task_id)
-    data = serialize_task(task)
-    session.close()
-    return jsonify(data)
-
-@app.route("/api/tasks/<int:task_id>/stop", methods=["POST"])
-def stop_task_timer(task_id):
-    session = SessionLocal()
-    stop_timer(session, task_id)
-    task = session.get(Task, task_id)
-    data = serialize_task(task)
-    session.close()
-    return jsonify(data)
 
 @app.route("/api/tasks/<int:task_id>", methods=["PATCH"])
 def update_task(task_id):
-    session = SessionLocal()
-    task = session.get(Task, task_id)
-    if not task:
-        session.close()
-        return jsonify({"error": "Task not found"}), 404
+    with SessionLocal() as session:
+        task = session.get(Task, task_id)
 
-    data = request.json
-    if "title" in data:
-        task.title = data["title"]
-    if "project_id" in data:
-        task.project_id = data["project_id"]
-    if "due_date" in data:
-        task.due_date = data["due_date"]
-    if "completed" in data:
-        task.completed = data["completed"]
-        task.completed_at = int(time.time()) if data["completed"] else None
-    if "is_running" in data:
-        task.is_running = data["is_running"]
-    if "last_start" in data:
-        task.last_start = data["last_start"]
-    if "time_spent" in data:
-        task.time_spent = data["time_spent"]
-    task.updated_at = int(time.time())
-    session.commit()
-    result = serialize_task(task)
-    session.close()
-    return jsonify(result)
+        if not task:
+            return jsonify({"error": "not found"}), 404
 
-@app.route("/api/tasks/delete_all", methods=["DELETE"])
-def delete_all_tasks():
-    session = SessionLocal()
-    try:
-        # Delete all tasks
-        session.query(Task).delete()
+        data = request.get_json() or {}
+        now = int(time.time())
 
-        # Delete all recurring rules
-        session.query(RecurringTask).delete()
+        for field in ["title", "project_id", "due_date", "is_running", "last_start", "time_spent"]:
+            if field in data:
+                setattr(task, field, data[field])
+
+        if "completed" in data:
+            task.completed = data["completed"]
+            task.completed_at = now if data["completed"] else None
+
+        task.updated_at = now
+        session.commit()
+
+        return jsonify(serialize_task(task))
+
+
+@app.route("/api/tasks/<int:task_id>/complete", methods=["PUT"])
+def complete_task(task_id):
+    with SessionLocal() as session:
+        task = session.get(Task, task_id)
+
+        if not task:
+            return jsonify({"error": "not found"}), 404
+
+        now = int(time.time())
+
+        task.completed = not task.completed
+        task.completed_at = now if task.completed else None
+        task.updated_at = now
 
         session.commit()
-        return jsonify({"status": "all tasks and recurring rules deleted"})
-    finally:
-        session.close()
+
+        return jsonify(serialize_task(task))
+
+
+@app.route("/api/tasks/<int:task_id>/delete", methods=["DELETE"])
+def delete_task(task_id):
+    with SessionLocal() as session:
+        task = session.get(Task, task_id)
+
+        if not task:
+            return jsonify({"error": "not found"}), 404
+
+        session.delete(task)
+        session.commit()
+
+        return jsonify({"status": "deleted"})
+
+
+@app.route("/api/tasks/<int:task_id>/start", methods=["POST"])
+def start_task(task_id):
+    with SessionLocal() as session:
+        start_timer(session, task_id)
+        task = session.get(Task, task_id)
+
+        if not task:
+            return jsonify({"error": "not found"}), 404
+
+        return jsonify(serialize_task(task))
+
+
+@app.route("/api/tasks/<int:task_id>/stop", methods=["POST"])
+def stop_task(task_id):
+    with SessionLocal() as session:
+        stop_timer(session, task_id)
+        task = session.get(Task, task_id)
+
+        if not task:
+            return jsonify({"error": "not found"}), 404
+
+        return jsonify(serialize_task(task))
+
+
+@app.route("/api/tasks/delete_all", methods=["DELETE"])
+def delete_all():
+    with SessionLocal() as session:
+        session.query(Task).delete(synchronize_session=False)
+        session.query(RecurringTask).delete(synchronize_session=False)
+        session.commit()
+
+        return jsonify({"status": "cleared"})
+
+# ----------------------------
+# VIEWS
+# ----------------------------
+
+@app.route("/api/views/<view_name>/tasks", methods=["GET"])
+def get_view_tasks(view_name):
+    valid = {"today", "upcoming", "overdue"}
+    if view_name not in valid:
+        return jsonify({"error": f"Unknown view: {view_name}"}), 400
+
+    with SessionLocal() as session:
+        tasks = get_smart_view_tasks(session, view_name)
+        return jsonify({
+            "view": view_name,
+            "data": [serialize_task(t) for t in tasks],
+        })
+
+# ----------------------------
+# HEALTH
+# ----------------------------
 
 @app.route("/api/health")
 def health():

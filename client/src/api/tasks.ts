@@ -84,20 +84,30 @@ export const getTasks = async (projectId?: number): Promise<Task[]> => {
     const tasks: Task[] = [];
 
     await store.iterate<Task, void>((value) => {
-      if (!projectId || value.project_id === projectId) tasks.push(value);
+      if (!projectId || value.project_id === projectId) {
+        tasks.push(value);
+      }
     });
 
     return tasks;
   }
 
-  await syncTasks(); // ✅ sync first, then fetch
+  await syncTasks();
 
   const params = projectId ? { project_id: projectId } : {};
   const res = await API.get("/tasks", { params });
 
-  await Promise.all(res.data.map(cacheTask));
+  // ✅ FIX: Flask returns { data: [...] }
+  const tasks: Task[] = res?.data?.data ?? [];
 
-  return res.data;
+  if (!Array.isArray(tasks)) {
+    console.error("Invalid tasks response:", res.data);
+    return [];
+  }
+
+  await Promise.all(tasks.map(cacheTask));
+
+  return tasks;
 };
 
 export const createTask = async (

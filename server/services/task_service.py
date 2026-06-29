@@ -2,10 +2,7 @@ import time
 from sqlalchemy.orm import Session
 from server.models.task import Task
 from server.services.utils import get_default_project
-
-# server/services/task_service.py
-from server.models.task import Task
-import time
+from server.models.view import SmartView
 
 def create_task(session, title, project_id, due_date=None):
     task = Task(
@@ -58,3 +55,26 @@ def expand_task(task: Task):
             month = (month - 1) % 12 + 1
             current = current.replace(year=year, month=month)
     return occurrences
+
+def get_smart_view_tasks(session: Session, view: SmartView):
+    now = datetime.now()
+    today_start = int(datetime(now.year, now.month, now.day).timestamp())
+    today_end = today_start + 86399
+    upcoming_end = today_start + (3 * 86400) + 86399
+
+    base = session.query(Task).filter(Task.completed == False)
+
+    if view == SmartView.TODAY:
+        return (
+            base.filter(Task.due_date >= today_start, Task.due_date <= today_end).order_by(Task.due_date.asc()).all()
+        )
+    elif view == SmartView.UPCOMING:
+        return (
+            base.filter(Task.due_date >= today_start, Task.due_date <= upcoming_end).order_by(Task.due_date.asc())
+
+        )
+    elif view == SmartView.OVERDUE:
+        return (
+            base.filter(Task.due_date < today_start).order_by(Task.due_date.asc())
+        )
+    return []

@@ -40,6 +40,12 @@
   box-shadow: none;
 }
 
+/* Changes the horizontal slot lines from dashed/dotted to solid */
+.fc .fc-timegrid-slot-minor {
+  border-top-style: solid !important;
+  border-width: 1px;
+}
+
 @media screen and (max-width: 425px) {
   .fc-header-toolbar {
     flex-direction: column;
