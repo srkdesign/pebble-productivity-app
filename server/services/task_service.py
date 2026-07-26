@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from server.models.task import Task
 from server.services.utils import get_default_project
 from server.models.view import SmartView
+from datetime import datetime
 
 def create_task(session, title, project_id, due_date=None):
     task = Task(

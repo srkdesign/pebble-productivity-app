@@ -24,6 +24,15 @@ import {
   CollapseSidebarIcon,
 } from "@icons";
 
+import { SmartView } from "@/api/tasks";
+import { Project } from "@/types";
+
+const SMART_VIEWS: { id: SmartView; name: string; color: string }[] = [
+  { id: "today", name: "Today", color: "oklch(69.6% 0.17 162.48)" },
+  { id: "upcoming", name: "Upcoming", color: "oklch(68.5% 0.169 237.323)" },
+  { id: "overdue", name: "Overdue", color: "oklch(60.6% 0.25 292.717)" },
+];
+
 export default function ProjectSidebar({
   projects,
   active,
@@ -31,7 +40,14 @@ export default function ProjectSidebar({
   onCreate,
   onUpdate,
   onDelete,
-}: any) {
+}: {
+  projects: Project[];
+  active: number | SmartView;
+  onSelect: (id: number | SmartView) => void;
+  onCreate: (p: Project) => void;
+  onUpdate: (p: Project) => void;
+  onDelete: (id: number) => void;
+}) {
   const [name, setName] = useState("");
   const [color, setColor] = useState("#6566f1");
   const [collapsed, setCollapsed] = useState(false);
@@ -40,8 +56,7 @@ export default function ProjectSidebar({
   const editState = useOverlayState();
   const deleteState = useOverlayState();
 
-  // ✅ Single state for both edit and delete
-  const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [editName, setEditName] = useState("");
   const [editColor, setEditColor] = useState("#6366f1");
 
@@ -49,7 +64,6 @@ export default function ProjectSidebar({
     if (!name.trim()) return;
     try {
       const project = await createProject(name, color);
-
       onCreate(project);
       setName("");
       close();
@@ -62,7 +76,7 @@ export default function ProjectSidebar({
     }
   };
 
-  const openEdit = (p: any) => {
+  const openEdit = (p: Project) => {
     setSelectedProject(p);
     setEditName(p.name ?? "");
     setEditColor(p.color ?? "#6366f1");
@@ -70,13 +84,12 @@ export default function ProjectSidebar({
   };
 
   const submitEdit = async (close: () => void) => {
-    if (!editName.trim()) return;
+    if (!editName.trim() || !selectedProject) return;
     try {
       const updated = await updateProject(selectedProject.id, {
         name: editName,
         color: editColor,
       });
-
       onUpdate(updated);
       close();
     } catch (err) {
@@ -128,9 +141,7 @@ export default function ProjectSidebar({
               Projects
             </h2>
             <div
-              className={`flex ${
-                collapsed ? "md:flex-col" : "flex-row"
-              } items-center gap-2`}
+              className={`flex ${collapsed ? "md:flex-col" : "flex-row"} items-center gap-2`}
             >
               <Button
                 isIconOnly
@@ -155,10 +166,31 @@ export default function ProjectSidebar({
             </div>
           </div>
 
-          {/* Project list */}
+          {/* ── COLLAPSED ───────────────────────────────────────────────────── */}
           {collapsed ? (
             <div className="flex md:flex-col h-full items-center gap-3 mt-2 overflow-auto md:overflow-visible">
-              {projects.map((p: any) => (
+              {/* Smart views — icon only */}
+              {SMART_VIEWS.map((v) => (
+                <Button
+                  key={v.id}
+                  isIconOnly
+                  variant={active === v.id ? "secondary" : "tertiary"}
+                  onPress={() => onSelect(v.id)}
+                >
+                  <span
+                    className="w-2 h-2 rounded-full transition-transform hover:scale-125"
+                    style={{ backgroundColor: v.color }}
+                    title={v.name}
+                  />
+                </Button>
+              ))}
+
+              {/* Divider */}
+              <div className="w-6 h-px bg-border my-1" />
+
+              {/* Projects — color dot only */}
+              {/* collapsed projects */}
+              {projects.map((p) => (
                 <Button
                   key={p.id}
                   isIconOnly
@@ -174,8 +206,33 @@ export default function ProjectSidebar({
               ))}
             </div>
           ) : (
+            /* ── EXPANDED ─────────────────────────────────────────────────────── */
             <div className="space-y-2 h-full flex-1 overflow-hidden overflow-y-auto mt-2">
-              {projects.map((p: any) => (
+              {/* Smart views — labeled */}
+              {SMART_VIEWS.map((v) => (
+                <Button
+                  key={v.id}
+                  fullWidth
+                  className="justify-start! rounded-xl min-h-11 gap-2"
+                  size="lg"
+                  variant={active === v.id ? "secondary" : "ghost"}
+                  onPress={() => onSelect(v.id)}
+                >
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ backgroundColor: v.color }}
+                  />
+                  {v.name}
+                </Button>
+              ))}
+
+              {/* Divider */}
+              <div className="flex items-center gap-2 px-2 pt-2 pb-1">
+                <div className="flex-1 h-px bg-border" />
+              </div>
+
+              {/* Projects — with edit/delete */}
+              {projects.map((p) => (
                 <div key={p.id} className="group relative">
                   <Button
                     fullWidth
@@ -220,7 +277,7 @@ export default function ProjectSidebar({
         </div>
       </Card.Content>
 
-      {/* Create modal */}
+      {/* ── CREATE MODAL ──────────────────────────────────────────────────────── */}
       <Modal state={createState}>
         <Modal.Backdrop>
           <Modal.Container placement="center">
@@ -301,7 +358,7 @@ export default function ProjectSidebar({
         </Modal.Backdrop>
       </Modal>
 
-      {/* Edit modal */}
+      {/* ── EDIT MODAL ────────────────────────────────────────────────────────── */}
       <Modal state={editState}>
         <Modal.Backdrop>
           <Modal.Container className="border-none" placement="center">
@@ -382,7 +439,7 @@ export default function ProjectSidebar({
         </Modal.Backdrop>
       </Modal>
 
-      {/* Delete modal */}
+      {/* ── DELETE MODAL ──────────────────────────────────────────────────────── */}
       <Modal state={deleteState}>
         <Modal.Backdrop>
           <Modal.Container placement="center">

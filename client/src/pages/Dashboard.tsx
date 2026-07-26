@@ -1,35 +1,31 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ProjectSidebar, TaskPanel } from "@components/index";
 import { getProjects } from "@api/projects";
+import { SmartView } from "@/api/tasks";
+import { Project } from "@/types";
 
 export default function Dashboard() {
-  const [projects, setProjects] = useState<any[]>([]);
-  const [activeProject, setActiveProject] = useState<number>(1);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [active, setActive] = useState<number | SmartView>("today");
+
+  // ✅ useMemo — not recalculated on every render
+  const inboxProject = useMemo(
+    () => projects.find((p) => p.is_default),
+    [projects],
+  );
 
   useEffect(() => {
-    getProjects().then((p) => {
-      setProjects(p);
-      // console.log(
-      //   "projects loaded:",
-      //   p.length,
-      //   p.map((x) => x.name),
-      // ); // ← add
-      if (p.length) setActiveProject(p[0].id);
-    });
+    getProjects().then((p) => setProjects(p));
   }, []);
 
-  const handleUpdate = (updated: any) => {
+  const handleUpdate = (updated: Project) => {
     setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
   };
 
   const handleDeleteProject = (id: number) => {
     setProjects((prev) => {
       const remaining = prev.filter((p) => p.id !== id);
-
-      if (activeProject === id) {
-        setActiveProject(remaining[0]?.id ?? null);
-      }
-
+      if (active === id) setActive("today");
       return remaining;
     });
   };
@@ -37,17 +33,26 @@ export default function Dashboard() {
   return (
     <div className="flex md:flex-row flex-col md:gap-6 gap-2 min-h-screen md:p-6 p-2">
       <ProjectSidebar
-        active={activeProject}
+        active={active}
         projects={projects}
-        onCreate={(p: any) => {
+        onSelect={setActive}
+        onCreate={(p: Project) => {
           setProjects((prev) => [...prev, p]);
-          setActiveProject(p.id);
+          setActive(p.id);
         }}
         onDelete={handleDeleteProject}
-        onSelect={setActiveProject}
         onUpdate={handleUpdate}
       />
-      <TaskPanel projectId={activeProject} projects={projects} />
+
+      {typeof active === "string" ? (
+        <TaskPanel
+          projects={projects}
+          view={active as SmartView}
+          inboxProjectId={inboxProject?.id}
+        />
+      ) : (
+        <TaskPanel projects={projects} projectId={active} />
+      )}
     </div>
   );
 }

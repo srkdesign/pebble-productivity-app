@@ -7,7 +7,7 @@ from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from sqlalchemy.orm import joinedload
 
-from server.db.session import SessionLocal, engine
+from server.db.session import SessionLocal, engine, with_session
 from server.models.base import Base
 from server.models.task import Task
 from server.models.project import Project
@@ -84,28 +84,28 @@ def serve(path):
 # ----------------------------
 
 @app.route("/api/projects", methods=["GET"])
+@with_session
 def get_projects():
-    with SessionLocal() as session:
-        projects = session.query(Project).all()
-        return jsonify([serialize_project(p) for p in projects])
+    projects = session.query(Project).all()
+    return jsonify([serialize_project(p) for p in projects])
 
 
 @app.route("/api/projects", methods=["POST"])
+@with_session
 def create_project_route():
-    with SessionLocal() as session:
-        data = request.get_json()
+    data = request.get_json()
 
-        existing = session.query(Project).filter_by(name=data["name"]).first()
-        if existing:
-            return jsonify(serialize_project(existing))
+    existing = session.query(Project).filter_by(name=data["name"]).first()
+    if existing:
+        return jsonify(serialize_project(existing))
 
-        project = create_project(
-            session,
-            data["name"],
-            data.get("color", "#6366f1"),
-        )
+    project = create_project(
+        session,
+        data["name"],
+        data.get("color", "#6366f1"),
+    )
 
-        return jsonify(serialize_project(project))
+    return jsonify(serialize_project(project))
 
 
 # ----------------------------
@@ -268,6 +268,7 @@ def delete_all():
 # ----------------------------
 
 @app.route("/api/views/<view_name>/tasks", methods=["GET"])
+@with_session
 def get_view_tasks(view_name):
     valid = {"today", "upcoming", "overdue"}
     if view_name not in valid:

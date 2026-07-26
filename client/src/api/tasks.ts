@@ -1,14 +1,13 @@
-// api/tasks.ts
 import axios from "axios";
 import localforage from "localforage";
-
 import { isServerOnline } from "./network";
 import { syncProjects } from "./projects";
-
 import { Task } from "@/types";
 
 const API = axios.create({ baseURL: `/api` });
 const store = localforage.createInstance({ name: "tasks" });
+
+export type SmartView = "today" | "upcoming" | "overdue";
 
 function notifyTasksUpdated() {
   window.dispatchEvent(new CustomEvent("tasks-updated"));
@@ -18,51 +17,53 @@ if (navigator.storage?.persist) {
   navigator.storage.persist();
 }
 
-// ─── Sync dirty records to Flask ──────────────────────────────────────────────
-export async function syncTasks() {
-  if (!(await isServerOnline())) return; // don't attempt if server unreachable
+// ─── Debounce helper ──────────────────────────────────────────────────────────
+function debounce<T extends (...args: any[]) => void>(fn: T, ms: number): T {
+  let timer: ReturnType<typeof setTimeout>;
+  return ((...args: any[]) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), ms);
+  }) as T;
+}
 
+// ─── Sync ─────────────────────────────────────────────────────────────────────
+export async function syncTasks() {
+  if (!(await isServerOnline())) return;
   await syncProjects();
 
   const dirty: Task[] = [];
-
   await store.iterate<Task, void>((value) => {
     if (value?._dirty) dirty.push(value);
   });
 
   await Promise.all(
     dirty.map(async (task) => {
-      // ✅ Strip _dirty before sending to Flask
       const { _dirty, ...payload } = task;
-
       try {
         if (task.id < 0) {
-          // ✅ Temp negative ID = new task, use POST not PATCH
           const res = await API.post(`/tasks`, payload);
-
-          // ✅ Remove old temp record, store with real ID from Flask
           await store.removeItem(String(task.id));
           await store.setItem(String(res.data.id), {
             ...res.data,
             _dirty: false,
           });
         } else {
-          // ✅ Existing task, use PATCH
           const res = await API.patch(`/tasks/${task.id}`, payload);
-
           await store.setItem(String(task.id), { ...res.data, _dirty: false });
         }
       } catch {
-        // leave dirty if sync fails, will retry next time
+        // leave dirty, retry next time
       }
     }),
   );
 }
 
-// ✅ Multiple triggers — online event unreliable on mobile
-window.addEventListener("online", syncTasks);
+// ─── Debounced sync listeners — prevents sync storms on mobile ────────────────
+const debouncedSync = debounce(syncTasks, 2000);
+
+window.addEventListener("online", debouncedSync);
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) syncTasks(); // fires when user switches back to app
+  if (!document.hidden) debouncedSync();
 });
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -78,32 +79,90 @@ async function markDirty(task: Task) {
   return task;
 }
 
-// ─── API calls — identical signatures, components unchanged ───────────────────
+// ─── Single cache read — shared by getTasks and getViewTasks ──────────────────
+async function getAllCached(): Promise<Task[]> {
+  const tasks: Task[] = [];
+
+  await store.iterate<Task, void>((value) => {
+    tasks.push(value);
+  });
+
+  return tasks;
+}
+
+// ─── View filter — mirrors backend logic exactly, used when offline ───────────
+function filterByView(tasks: Task[], view: SmartView): Task[] {
+  const now = new Date();
+
+  const todayStart =
+    new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 1000;
+
+  const todayEnd = todayStart + 86399;
+  const upcomingEnd = todayStart + 3 * 86400 + 86399;
+
+  switch (view) {
+    case "today":
+      return tasks.filter(
+        (task) =>
+          !task.completed &&
+          task.due_date != null &&
+          task.due_date >= todayStart &&
+          task.due_date <= todayEnd,
+      );
+
+    case "upcoming":
+      return tasks.filter(
+        (task) =>
+          !task.completed &&
+          task.due_date != null &&
+          task.due_date >= todayStart &&
+          task.due_date <= upcomingEnd,
+      );
+
+    case "overdue":
+      return tasks.filter(
+        (task) =>
+          !task.completed &&
+          task.due_date != null &&
+          task.due_date < todayStart,
+      );
+  }
+}
+
+// ─── API calls ────────────────────────────────────────────────────────────────
 export const getTasks = async (projectId?: number): Promise<Task[]> => {
   if (!(await isServerOnline())) {
-    const tasks: Task[] = [];
+    const tasks = await getAllCached();
 
-    await store.iterate<Task, void>((value) => {
-      if (!projectId || value.project_id === projectId) {
-        tasks.push(value);
-      }
-    });
-
-    return tasks;
+    return projectId !== undefined
+      ? tasks.filter((task) => task.project_id === projectId)
+      : tasks;
   }
 
   await syncTasks();
 
-  const params = projectId ? { project_id: projectId } : {};
+  const params = projectId !== undefined ? { project_id: projectId } : {};
+
   const res = await API.get("/tasks", { params });
 
-  // ✅ FIX: Flask returns { data: [...] }
   const tasks: Task[] = res?.data?.data ?? [];
 
-  if (!Array.isArray(tasks)) {
-    console.error("Invalid tasks response:", res.data);
-    return [];
+  if (!Array.isArray(tasks)) return [];
+
+  await Promise.all(tasks.map(cacheTask));
+
+  return tasks;
+};
+
+export const getViewTasks = async (view: SmartView): Promise<Task[]> => {
+  if (!(await isServerOnline())) {
+    return filterByView(await getAllCached(), view);
   }
+
+  const res = await API.get(`/views/${view}/tasks`);
+  const tasks: Task[] = res?.data?.data ?? [];
+
+  if (!Array.isArray(tasks)) return [];
 
   await Promise.all(tasks.map(cacheTask));
 
@@ -125,19 +184,15 @@ export const createTask = async (
   },
 ): Promise<Task> => {
   const payload: any = { title, project_id: projectId, due_date: dueDate };
-
   if (recurring_rule) payload.recurring_rule = recurring_rule;
 
   if (!(await isServerOnline())) {
     const tempTask: Task = { ...payload, id: -Date.now(), _dirty: true };
-
     await markDirty(tempTask);
-
     return tempTask;
   }
 
   const res = await API.post("/tasks", payload);
-
   return cacheTask(res.data);
 };
 
@@ -145,15 +200,11 @@ export const toggleComplete = async (id: number): Promise<Task> => {
   if (!(await isServerOnline())) {
     const cached = await store.getItem<Task>(String(id));
     const updated = { ...cached!, completed: !cached?.completed, _dirty: true };
-
     notifyTasksUpdated();
-
     return markDirty(updated);
   }
   const res = await API.put(`/tasks/${id}/complete`);
-
   notifyTasksUpdated();
-
   return cacheTask(res.data);
 };
 
@@ -165,31 +216,23 @@ export const deleteTask = async (id: number): Promise<void> => {
 export const startTimer = async (id: number): Promise<Task> => {
   if (!(await isServerOnline())) {
     const cached = await store.getItem<Task>(String(id));
-
-    // If somehow already running, stop accumulating from the old start before
-    // restarting — prevents double-counting if start is called twice
     const now = Math.floor(Date.now() / 1000);
     const base =
       cached?.is_running && cached?.last_start != null
         ? (cached.time_spent ?? 0) + (now - cached.last_start)
         : (cached?.time_spent ?? 0);
-
     const updated: Task = {
       ...cached!,
       is_running: true,
       last_start: now,
       time_spent: base,
     };
-
     await markDirty(updated);
     notifyTasksUpdated();
-
     return updated;
   }
   const res = await API.post(`/tasks/${id}/start`);
-
   notifyTasksUpdated();
-
   return cacheTask(res.data);
 };
 
@@ -197,29 +240,22 @@ export const stopTimer = async (id: number): Promise<Task> => {
   if (!(await isServerOnline())) {
     const cached = await store.getItem<Task>(String(id));
     const now = Math.floor(Date.now() / 1000);
-
-    // Guard: if last_start is missing, don't add anything — avoids wiping progress
     const elapsed =
       cached?.last_start != null
         ? (cached.time_spent ?? 0) + (now - cached.last_start)
         : (cached?.time_spent ?? 0);
-
     const updated: Task = {
       ...cached!,
       is_running: false,
       last_start: undefined,
       time_spent: elapsed,
     };
-
     await markDirty(updated);
     notifyTasksUpdated();
-
     return updated;
   }
   const res = await API.post(`/tasks/${id}/stop`);
-
   notifyTasksUpdated();
-
   return cacheTask(res.data);
 };
 
@@ -235,15 +271,11 @@ export const updateTask = async (
 ): Promise<Task> => {
   if (!(await isServerOnline())) {
     const cached = await store.getItem<Task>(String(id));
-
     notifyTasksUpdated();
-
     return markDirty({ ...cached!, ...data });
   }
   const res = await API.patch(`/tasks/${id}`, data);
-
   notifyTasksUpdated();
-
   return cacheTask(res.data);
 };
 

@@ -12,7 +12,7 @@ class Task(Base):
   id = Column(Integer, primary_key=True, autoincrement=True)
   title = Column(String, nullable=False)
 
-  completed = Column(Boolean, default=False, nullable=False)
+  completed = Column(Boolean, default=False, nullable=False, index=True)
   completed_at = Column(Integer, nullable=True)  # timestamp in seconds
 
   updated_at = Column(Integer, nullable=False)
@@ -24,9 +24,9 @@ class Task(Base):
   is_running = Column(Boolean, default=False, nullable=False)
   last_start = Column(Integer)
 
-  due_date = Column(BigInteger, nullable=True)
+  due_date = Column(BigInteger, nullable=True, index=True)
 
-  project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
+  project_id = Column(Integer, ForeignKey("projects.id"), nullable=False, index=True)
   project = relationship("Project", back_populates="tasks")
 
   parent_id = Column(Integer, ForeignKey("tasks.id"))

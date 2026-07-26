@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { getTasks, deleteAllTasks } from "@api/tasks";
+import { getTasks, getViewTasks, deleteAllTasks, SmartView } from "@api/tasks";
 import {
   Button,
   Card,
@@ -10,80 +10,103 @@ import {
 } from "@heroui/react";
 import { CreateTask, TaskItem } from "@components/index";
 import { TrashBin } from "@icons";
-
-import { Task } from "@/types";
+import { Task, Project } from "@/types";
 import { greetings } from "@/consts/greetings";
 
+const VIEW_LABELS: Record<SmartView, string> = {
+  today: "Today",
+  upcoming: "Upcoming",
+  overdue: "Overdue",
+};
+
 interface TaskPanelProps {
-  projects: any[];
-  projectId: number;
+  projects: Project[];
+  projectId?: number;
+  view?: SmartView;
+  inboxProjectId?: number;
 }
 
-export default function TaskPanel({ projects, projectId }: TaskPanelProps) {
+export default function TaskPanel({
+  projects,
+  projectId,
+  view,
+  inboxProjectId,
+}: TaskPanelProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
   const greeting = useRef(
     greetings[Math.floor(Math.random() * greetings.length)],
   );
-
   const deleteAllTasksState = useOverlayState();
-
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 768px)");
     setIsMobile(mq.matches);
-
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
     mq.addEventListener("change", handler);
-
     return () => mq.removeEventListener("change", handler);
   }, []);
 
   const refreshTasks = useCallback(async () => {
     try {
-      const allTasks = await getTasks(projectId);
+      let allTasks: Task[];
+
+      if (view) {
+        allTasks = await getViewTasks(view);
+      } else {
+        allTasks = await getTasks(projectId);
+      }
+
       setTasks(allTasks);
       setIsLoading(false);
-    } catch (err) {
-      alert(`Failed to fetch tasks: ${err}`);
+    } catch (err: any) {
+      // replace alert with toast if available in your UI lib
+      console.error("Failed to fetch tasks:", err?.message ?? err);
+      setIsLoading(false);
     }
-  }, [projectId]);
+  }, [projectId, view, inboxProjectId]);
 
   useEffect(() => {
     setIsLoading(true);
     refreshTasks();
   }, [refreshTasks]);
 
-  const { activeTasks, completedTasks } = useMemo(() => {
+  useEffect(() => {
+    window.addEventListener("tasks-updated", refreshTasks);
+    return () => window.removeEventListener("tasks-updated", refreshTasks);
+  }, [refreshTasks]);
+
+  // ✅ No project filter needed — data is already filtered upstream
+  // Fix useMemo — add explicit return type
+  const { activeTasks, completedTasks } = useMemo((): {
+    activeTasks: Task[];
+    completedTasks: Task[];
+  } => {
     const active: Task[] = [];
     const completed: Task[] = [];
 
     for (const t of tasks) {
-      if (t.project_id !== projectId) continue;
+      // when a project is selected, filter by project — views are pre-filtered by API
+      if (!view && t.project_id !== projectId) continue;
       (t.completed ? completed : active).push(t);
     }
 
-    return {
-      activeTasks: active,
-      completedTasks: completed,
-    };
-  }, [tasks, projectId]);
+    return { activeTasks: active, completedTasks: completed };
+  }, [tasks, projectId, view]);
 
   const handleDeleteAll = async () => {
     try {
       await deleteAllTasks();
       setTasks([]);
-    } catch (err) {
-      alert(`Failed to delete all tasks: ${err}`);
+    } catch (err: any) {
+      console.error("Failed to delete tasks:", err?.message ?? err);
     }
     deleteAllTasksState.close();
   };
 
   return (
     <div className="flex-1">
-      {/* HEADER */}
       <div className="flex flex-col gap-6 mb-4">
         <h2 className="hidden md:block text-3xl font-bold tracking-[-0.04em]">
           {greeting.current}
@@ -100,11 +123,11 @@ export default function TaskPanel({ projects, projectId }: TaskPanelProps) {
         </Card>
       </div>
 
-      {/* TASK AREA */}
       <div className="flex flex-col mt-12 space-y-3 grow">
-        {/* HEADER ROW */}
         <div className="flex justify-between items-baseline">
-          <h1 className="text-2xl font-bold pl-2">Tasks</h1>
+          <h1 className="text-2xl font-bold pl-2">
+            {view ? VIEW_LABELS[view] : "Tasks"}
+          </h1>
 
           <Button
             className="rounded-full gap-2"
@@ -117,7 +140,6 @@ export default function TaskPanel({ projects, projectId }: TaskPanelProps) {
           </Button>
         </div>
 
-        {/* ACTIVE TASKS (PRIMARY FOCUS) */}
         <div className="flex flex-col gap-2">
           {isLoading ? (
             Array.from({ length: 5 }).map((_, i) => (
@@ -126,7 +148,8 @@ export default function TaskPanel({ projects, projectId }: TaskPanelProps) {
               </Card>
             ))
           ) : activeTasks.length > 0 ? (
-            activeTasks.map((task) => (
+            // Fix map callbacks — task is already Task[] so just annotate
+            activeTasks.map((task: Task) => (
               <TaskItem
                 key={task.id}
                 projects={projects}
@@ -139,7 +162,6 @@ export default function TaskPanel({ projects, projectId }: TaskPanelProps) {
           )}
         </div>
 
-        {/* COMPLETED (LOW PRIORITY DISCLOSURE) */}
         {completedTasks.length > 0 && (
           <div className="flex w-full p-0">
             <Accordion
@@ -155,10 +177,9 @@ export default function TaskPanel({ projects, projectId }: TaskPanelProps) {
                     <Accordion.Indicator className="mr-3.5" />
                   </Accordion.Trigger>
                 </Accordion.Heading>
-
                 <Accordion.Panel>
                   <Accordion.Body className="flex flex-col gap-2 mt-2 opacity-70 p-0 m-0 pt-2">
-                    {completedTasks.map((task) => (
+                    {completedTasks.map((task: Task) => (
                       <TaskItem
                         key={task.id}
                         projects={projects}
@@ -174,7 +195,6 @@ export default function TaskPanel({ projects, projectId }: TaskPanelProps) {
         )}
       </div>
 
-      {/* DELETE MODAL */}
       <Modal state={deleteAllTasksState}>
         <Modal.Backdrop>
           <Modal.Container placement="center">
@@ -187,7 +207,6 @@ export default function TaskPanel({ projects, projectId }: TaskPanelProps) {
                     </Modal.Heading>
                     <Modal.CloseTrigger />
                   </Modal.Header>
-
                   <Modal.Footer className="flex *:w-full md:*:w-auto">
                     <Button variant="tertiary" onPress={close}>
                       Cancel
