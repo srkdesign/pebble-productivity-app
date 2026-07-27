@@ -107,6 +107,39 @@ def create_project_route():
 
     return jsonify(serialize_project(project))
 
+@app.route("/api/projects/<int:project_id>", methods=["PATCH"])
+@with_session
+def update_project_route(project_id):
+    project = session.query(Project).filter(Project.id == project_id).first()
+
+    if not project:
+        return jsonify({"error": "Not found"}), 404
+
+    data = request.json
+    if "name" in data:
+        project.name = data["name"]
+    if "color" in data:
+        project.color = data["color"]
+
+    project.updated_at = int(time.time())
+    session.commit()
+    session.refresh(project)
+
+    return jsonify(serialize_project(project))
+
+
+@app.route("/api/projects/<int:project_id>", methods=["DELETE"])
+@with_session
+def delete_project_route(project_id):
+    project = session.query(Project).filter(Project.id == project_id).first()
+
+    if not project:
+        return jsonify({"error": "Not found"}), 404
+
+    session.delete(project)
+    session.commit()
+
+    return jsonify({"success": True})
 
 # ----------------------------
 # TASKS (FAST CORE)

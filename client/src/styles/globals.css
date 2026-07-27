@@ -24,7 +24,7 @@
 
   .checkbox {
     flex-direction: row !important;
-    gap: 2rem !important;
+    gap: 0.6rem !important;
   }
 }
 
