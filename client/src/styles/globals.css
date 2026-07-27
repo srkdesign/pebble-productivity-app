@@ -10,7 +10,9 @@
 
 :root {
   --button-fg: none !important;
+  --accent-foreground: none !important;
   --color-accent-soft-foreground: none !important;
+  --accent-soft-foreground: none !important;
   @apply font-medium text-zinc-950 dark:text-zinc-50;
 }
 
@@ -18,6 +20,11 @@
   .button--icon-only svg {
     max-width: unset !important;
     max-height: unset !important;
+  }
+
+  .checkbox {
+    flex-direction: row !important;
+    gap: 2rem !important;
   }
 }
 
